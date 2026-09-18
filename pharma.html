@@ -1,0 +1,2449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PHARMA-CORE: Odisseia Farmacocinética 3D</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --primary-glow: #00f5d4;
+  --secondary-glow: #e63946;
+  --gold-glow: #ffd166;
+  --bio-emerald: #10b981;
+  --blood-dark: #07090e;
+  --lumen-red: #1b070b;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background-color: var(--blood-dark);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #e2e8f0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 3D Scene Perspective */
+.scene-container {
+  perspective: 1000px;
+  perspective-origin: 50% 50%;
+}
+
+/* Specular Capsule 3D Engine */
+.capsule-wrapper {
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.capsule-3d {
+  position: relative;
+  width: 90px;
+  height: 180px;
+  transform-style: preserve-3d;
+  animation: floatCapsule 4s ease-in-out infinite;
+}
+
+@keyframes floatCapsule {
+  0%, 100% {
+    transform: translateY(0px) rotateX(12deg) rotateY(18deg) rotateZ(-6deg);
+  }
+  50% {
+    transform: translateY(-16px) rotateX(20deg) rotateY(-14deg) rotateZ(8deg);
+  }
+}
+
+.capsule-half-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 90px;
+  height: 95px;
+  background: linear-gradient(135deg, rgba(255, 59, 78, 0.95) 0%, rgba(185, 28, 48, 0.9) 50%, rgba(90, 8, 18, 0.85) 100%);
+  border-radius: 50px 50px 0 0;
+  box-shadow: inset -6px -6px 14px rgba(0, 0, 0, 0.6), inset 8px 8px 16px rgba(255, 200, 200, 0.5), 0 0 25px rgba(230, 57, 70, 0.4);
+  border: 1px solid rgba(255, 120, 140, 0.4);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+  overflow: hidden;
+}
+
+.capsule-half-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 90px;
+  height: 95px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(220, 226, 235, 0.88) 50%, rgba(150, 160, 175, 0.85) 100%);
+  border-radius: 0 0 50px 50px;
+  box-shadow: inset -6px 6px 14px rgba(0, 0, 0, 0.35), inset 8px -8px 16px rgba(255, 255, 255, 0.9), 0 0 20px rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-top: none;
+  overflow: hidden;
+}
+
+.specular-shine {
+  position: absolute;
+  top: 8px;
+  left: 14px;
+  width: 18px;
+  height: 140px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.3) 50%, rgba(255, 255, 255, 0.05) 100%);
+  border-radius: 20px;
+  filter: blur(1.5px);
+  pointer-events: none;
+}
+
+.granules {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(#00f5d4 2px, transparent 3px), radial-gradient(#ffd166 2px, transparent 3px);
+  background-size: 16px 16px, 22px 22px;
+  background-position: 0 0, 8px 8px;
+  opacity: 0.55;
+  animation: pulseGranules 3s ease-in-out infinite alternate;
+}
+
+@keyframes pulseGranules {
+  0% { opacity: 0.35; transform: scale(0.98); }
+  100% { opacity: 0.7; transform: scale(1.02); }
+}
+
+/* Receptor Pod Buttons */
+.receptor-pod {
+  background: rgba(13, 27, 42, 0.75);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(0, 245, 212, 0.22);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 0 12px rgba(0, 245, 212, 0.05);
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.receptor-pod:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.015);
+  border-color: rgba(0, 245, 212, 0.6);
+  box-shadow: 0 12px 30px rgba(0, 245, 212, 0.2), inset 0 0 16px rgba(0, 245, 212, 0.15);
+}
+
+.receptor-pod:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
+}
+
+/* Biomedical HUD Glass */
+.hud-glass {
+  background: rgba(10, 15, 25, 0.82);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+}
+
+/* Microcapsule Health Icons */
+.health-capsule {
+  width: 14px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #e63946 50%, #ffffff 50%);
+  box-shadow: 0 0 8px rgba(230, 57, 70, 0.6);
+  transition: all 0.4s ease;
+}
+
+.health-capsule.dissolved {
+  opacity: 0.18;
+  filter: grayscale(1) blur(0.5px);
+  box-shadow: none;
+  transform: scale(0.8);
+}
+
+/* Pulse Glow */
+.glow-text-cyan {
+  text-shadow: 0 0 10px rgba(0, 245, 212, 0.6);
+}
+
+.glow-text-gold {
+  text-shadow: 0 0 10px rgba(255, 209, 102, 0.7);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(13, 27, 42, 0.8);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 245, 212, 0.4);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 245, 212, 0.7);
+}
+
+/* Shake Animation for Failures */
+@keyframes screenShake {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-6px, 4px) rotate(-0.5deg); }
+  40% { transform: translate(6px, -4px) rotate(0.5deg); }
+  60% { transform: translate(-4px, 2px); }
+  80% { transform: translate(4px, -2px); }
+  100% { transform: translate(0, 0); }
+}
+
+.shake-active {
+  animation: screenShake 0.45s ease;
+}
+</style>
+</head>
+<body class="relative min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-teal-500 selection:text-black">
+
+  <!-- Background Vascular Simulation Canvas -->
+  <canvas id="bloodstreamCanvas" class="fixed inset-0 w-full h-full pointer-events-none z-0"></canvas>
+  <div class="fixed inset-0 bg-gradient-to-b from-transparent via-[rgba(7,9,14,0.4)] to-[rgba(7,9,14,0.95)] pointer-events-none z-0"></div>
+
+  <!-- Top Banner: CANAL ESTUDANDO COM MARCELLA VEIGA -->
+  <aside class="relative z-30 w-full bg-gradient-to-r from-slate-950 via-[#160b1e] to-slate-950 border-b border-pink-500/30 shadow-[0_4px_20px_rgba(236,72,153,0.15)] px-3 sm:px-6 py-2.5 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Profile Picture & Channel Title -->
+      <div class="flex items-center gap-3">
+        <div class="relative group">
+          <!-- Glow aura around avatar -->
+          <div class="absolute -inset-0.5 bg-gradient-to-r from-pink-500 to-amber-400 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+          
+          <!-- Foto / Imagem (substitua o atributo src pela URL da sua imagem pessoal se desejar) -->
+          <img 
+            id="authorAvatarImg"
+            src="https://images.unsplash.com/photo-1594824813694-81498b2513f5?auto=format&fit=crop&w=180&q=80" 
+            alt="Marcella Veiga"
+            class="relative w-11 h-11 sm:w-13 sm:h-13 rounded-full object-cover border-2 border-white/80 shadow-md ring-2 ring-pink-500/40 transition-transform duration-300 group-hover:scale-105"
+            onerror="this.onerror=null; this.src='https://placehold.co/120x120/2e0854/f472b6?text=MV';"
+          />
+          <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-400 border-2 border-slate-950 rounded-full" title="Criadora Ativa"></span>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-pink-950/80 border border-pink-500/40 text-pink-300 font-mono font-bold uppercase tracking-wider">
+              Estudante & Criadora
+            </span>
+            <span class="text-[10px] text-amber-300/90 font-mono hidden sm:inline">★ Conteúdo Oficial</span>
+          </div>
+          <h2 class="text-xs sm:text-sm md:text-base font-black tracking-wide uppercase bg-gradient-to-r from-pink-400 via-rose-200 to-amber-300 bg-clip-text text-transparent drop-shadow-sm">
+            CANAL ESTUDANDO COM MARCELLA VEIGA
+          </h2>
+          <p class="text-[10px] sm:text-xs text-slate-300/80 font-sans leading-tight">
+            Farmacologia & Ciências da Saúde Descomplicadas para Provas e Concursos
+          </p>
+        </div>
+      </div>
+
+      <!-- Responsive Social Buttons (Instagram & YouTube) -->
+      <div class="flex items-center gap-2 sm:gap-3 ml-auto sm:ml-0">
+        <!-- Instagram Link -->
+        <a 
+          href="https://www.instagram.com/estudandocommarcellaveiga" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          class="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gradient-to-r from-purple-900/40 via-pink-900/40 to-amber-900/30 hover:from-purple-600 hover:via-pink-600 hover:to-amber-500 border border-pink-500/40 text-slate-100 hover:text-white text-xs font-bold transition-all duration-300 shadow-sm hover:shadow-[0_0_15px_rgba(236,72,153,0.4)] group"
+          title="Acessar Instagram @estudandocommarcellaveiga"
+        >
+          <svg class="w-4 h-4 text-pink-400 group-hover:text-white transition-colors" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+          </svg>
+          <span class="tracking-wide">Instagram</span>
+        </a>
+
+        <!-- YouTube Link -->
+        <a 
+          href="https://www.youtube.com/@EstudandocomMarcellaVeiga" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          class="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-red-950/50 hover:bg-red-600 border border-red-500/50 text-slate-100 hover:text-white text-xs font-bold transition-all duration-300 shadow-sm hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] group"
+          title="Inscrever-se no canal Estudando com Marcella Veiga no YouTube"
+        >
+          <svg class="w-4 h-4 text-red-400 group-hover:text-white transition-colors" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+          <span class="tracking-wide">YouTube</span>
+        </a>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Top Navigation & Medical Telemetry HUD -->
+  <header class="relative z-20 w-full px-3 sm:px-6 py-3 hud-glass border-b border-cyan-500/20">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Brand & Phase Telemetry -->
+      <div class="flex items-center gap-3">
+        <div class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-cyan-950/60 border border-cyan-400/40 shadow-inner">
+          <svg class="w-6 h-6 text-cyan-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-sm sm:text-base font-black tracking-wider uppercase bg-gradient-to-r from-cyan-300 via-teal-200 to-amber-300 bg-clip-text text-transparent">
+            PHARMA-CORE <span class="text-xs px-2 py-0.5 rounded bg-red-950/70 text-red-400 border border-red-500/30">3D NANO-VESSEL</span>
+          </h1>
+          <p id="phaseTelemetry" class="text-xs text-cyan-300/80 font-mono tracking-tight">Fase Farmacológica: Questão 1 / 60</p>
+        </div>
+      </div>
+
+      <!-- Health Bar (10 Microcapsules) -->
+      <div class="flex flex-col items-end gap-1">
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] sm:text-xs font-mono font-semibold tracking-wider text-slate-300 uppercase">Integridade do Fármaco:</span>
+          <span id="healthCounterText" class="text-xs sm:text-sm font-black font-mono text-emerald-400">10/10</span>
+        </div>
+        <div id="healthCapsulesContainer" class="flex items-center gap-1.5 p-1.5 rounded-lg bg-black/40 border border-slate-700/50">
+          <!-- 10 health capsules generated procedurally -->
+        </div>
+      </div>
+
+      <!-- Bioavailability Badge & Sound Control -->
+      <div class="flex items-center gap-3">
+        <div class="px-3 py-1.5 rounded-lg bg-cyan-950/40 border border-cyan-400/30 text-right">
+          <span class="block text-[10px] font-mono text-slate-400 uppercase tracking-widest">Biodisponibilidade</span>
+          <span id="bioavailabilityVal" class="text-xs sm:text-sm font-black text-cyan-300 font-mono glow-text-cyan">100% Bioativo (0 pts)</span>
+        </div>
+        <button id="soundToggleBtn" class="p-2 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-cyan-400/50 transition-colors text-slate-300 hover:text-cyan-300" title="Alternar Efeitos Sonoros">
+          <svg id="soundIconOn" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+          <svg id="soundIconOff" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Pharmacokinetic ADME Progress Tracker Circuit -->
+    <div class="max-w-7xl mx-auto mt-2 pt-2 border-t border-slate-800/80 flex flex-col gap-1">
+      <div class="flex justify-between text-[10px] font-mono font-bold tracking-wider text-slate-400 uppercase">
+        <span id="admeA" class="text-cyan-400 flex items-center gap-1">● Absorção (Lúmen)</span>
+        <span id="admeD" class="text-slate-500 flex items-center gap-1">○ Distribuição (Plasma)</span>
+        <span id="admeM" class="text-slate-500 flex items-center gap-1">○ Biotransformação (Fígado)</span>
+        <span id="admeE" class="text-slate-500 flex items-center gap-1">○ Excreção (Sítio Alvo)</span>
+      </div>
+      <div class="relative w-full h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+        <div id="admeProgressBar" class="h-full bg-gradient-to-r from-cyan-400 via-amber-400 to-emerald-400 transition-all duration-500 rounded-full" style="width: 4%;"></div>
+      </div>
+    </div>
+  </header>
+
+  <main id="mainAppArena" class="relative z-10 max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 flex-1 flex flex-col justify-center">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+      
+      <!-- Left Column: 3D Microcapsule Bio-Avatar -->
+      <div class="lg:col-span-4 flex flex-col items-center justify-center p-4 scene-container">
+        <div class="relative flex flex-col items-center">
+          
+          <!-- Biomedical Orb Glow Behind Pill -->
+          <div class="absolute -inset-10 bg-gradient-to-tr from-cyan-500/20 via-red-500/15 to-transparent rounded-full filter blur-2xl pointer-events-none animate-pulse"></div>
+
+          <!-- 3D Drug Capsule Element -->
+          <div id="capsuleWrapper" class="capsule-wrapper cursor-pointer" title="Cápsula Ativa em Suspensão Vascular">
+            <div class="capsule-3d">
+              <!-- Top Cap (Gelatina Escarlate Translúcida) -->
+              <div class="capsule-half-top">
+                <div class="granules"></div>
+                <div class="specular-shine"></div>
+              </div>
+              <!-- Bottom Body (Gelatina Branca Pérola) -->
+              <div class="capsule-half-bottom">
+                <div class="granules" style="filter: hue-rotate(180deg);"></div>
+                <div class="specular-shine"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Capsule Status Pedestal -->
+          <div class="mt-4 px-4 py-1.5 rounded-full bg-slate-900/90 border border-slate-700/80 text-center shadow-lg">
+            <span id="capsuleStatusBadge" class="text-[11px] font-mono font-semibold tracking-wider text-cyan-300 uppercase flex items-center gap-1.5 justify-center">
+              <span class="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+              Fármaco em Circulação Ativa
+            </span>
+          </div>
+          
+          <!-- Interactive Guidance Tip -->
+          <p class="text-[11px] text-slate-400 mt-2 font-mono text-center max-w-[240px]">
+            Acople a molécula no complexo receptor farmacologicamente correto.
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Column: Question Statement & 5 Molecular Receptor Pods -->
+      <div class="lg:col-span-8 flex flex-col gap-4">
+        
+        <!-- Question Enunciation Panel (Glassmorphic) -->
+        <div class="hud-glass p-4 sm:p-6 rounded-2xl border border-cyan-500/30 relative overflow-hidden">
+          <div class="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+              <span id="qLevelBadge" class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-500/40">
+                Nível I: Farmacocinética
+              </span>
+              <span id="qTopicBadge" class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-slate-800 text-cyan-300 border border-slate-700">
+                Absorção & Fatores Fisiológicos
+              </span>
+            </div>
+            <span id="qIndexBadge" class="text-xs font-mono text-slate-400">ID #01</span>
+          </div>
+
+          <!-- Question Prompt -->
+          <h2 id="qStatement" class="text-sm sm:text-base md:text-lg font-semibold text-slate-100 leading-relaxed min-h-[56px]">
+            Carregando parâmetros farmacológicos...
+          </h2>
+        </div>
+
+        <!-- 5 Receptor Docking Pods (Alternatives A - E) -->
+        <div id="receptorsContainer" class="grid grid-cols-1 gap-2.5">
+          <!-- Dynamically populated pods -->
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- MODAL: ANÁLISE DE FARMACODINÂMICA (FEEDBACK) -->
+  <div id="feedbackModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md hidden transition-opacity duration-300">
+    <div class="relative w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl hud-glass border border-cyan-400/40 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <!-- Modal Header -->
+      <div id="feedbackHeader" class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div id="feedbackStatusIcon" class="w-8 h-8 rounded-lg flex items-center justify-center font-black text-lg">
+            <!-- Check or X mark -->
+          </div>
+          <div>
+            <h3 id="feedbackStatusTitle" class="text-base sm:text-lg font-black tracking-wide uppercase">
+              INTERAÇÃO BEM-SUCEDIDA
+            </h3>
+            <p id="feedbackChoiceSubtitle" class="text-xs font-mono text-slate-300">
+              Sua Escolha: Alternativa A | Gabarito Correto: Alternativa A
+            </p>
+          </div>
+        </div>
+        <span id="feedbackRewardBadge" class="px-3 py-1 rounded-full text-xs font-mono font-black tracking-wider bg-emerald-950 text-emerald-400 border border-emerald-500/50">
+          +100 Bioativo
+        </span>
+      </div>
+
+      <!-- Modal Body (Scrollable Detailed Pharmacological Breakdown) -->
+      <div class="p-5 overflow-y-auto space-y-4 text-xs sm:text-sm leading-relaxed">
+        
+        <!-- Section: Correct Mechanism -->
+        <div class="p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/30">
+          <h4 class="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-2 mb-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+            Mecanismo Molecular & Clínico da Resposta Correta:
+          </h4>
+          <p id="feedbackCorrectAnswerText" class="font-semibold text-emerald-200 mb-2 border-l-2 border-emerald-500 pl-2"></p>
+          <p id="feedbackCorrectExplanation" class="text-slate-300 font-sans leading-relaxed"></p>
+        </div>
+
+        <!-- Section: Inactive Metabolites / Distractor Dissection -->
+        <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+          <h4 class="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2 mb-2">
+            <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+            Metabólitos Inativos / Inconsistências Farmacológicas das Outras Opções:
+          </h4>
+          <div id="feedbackDistractorsList" class="space-y-2.5">
+            <!-- Distractor breakdown items dynamically generated -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Actions Footer -->
+      <div class="p-4 border-t border-slate-800 bg-black/40 flex flex-wrap items-center justify-between gap-3">
+        <span class="text-[11px] font-mono text-slate-400">Revise com atenção as bases fisiológicas antes de avançar.</span>
+        <div class="flex items-center gap-2">
+          <button id="feedbackActionBtn" class="px-5 py-2.5 rounded-xl font-bold font-mono text-xs sm:text-sm tracking-wider uppercase bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 shadow-lg shadow-cyan-500/25 transition-all">
+            Seguir para o Próximo Tecido →
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SCREEN A: FALÊNCIA TERAPÊUTICA (GAME OVER) -->
+  <div id="gameOverModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-lg hidden">
+    <div class="relative w-full max-w-2xl p-6 sm:p-8 rounded-2xl hud-glass border border-red-500/50 shadow-2xl text-center space-y-5">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-red-950/80 border border-red-500 flex items-center justify-center text-red-400 shadow-lg shadow-red-950">
+        <svg class="w-10 h-10 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+        </svg>
+      </div>
+
+      <div>
+        <h2 class="text-xl sm:text-2xl font-black tracking-wider uppercase text-red-400">
+          DEPURAÇÃO TOTAL - FÁRMACO ELIMINADO SEM RESPOSTA CLÍNICA
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-md mx-auto">
+          As 10 unidades de integridade foram degradadas por falhas metabólicas e incompatibilidades de receptores. O fármaco foi completamente eliminado antes do efeito terapêutico.
+        </p>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 py-3 border-y border-slate-800">
+        <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+          <span class="block text-[10px] font-mono text-slate-400 uppercase">Pontuação Final</span>
+          <span id="goScore" class="text-base font-black text-cyan-300 font-mono">0 pts</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+          <span class="block text-[10px] font-mono text-slate-400 uppercase">Eficácia Global</span>
+          <span id="goEfficiency" class="text-base font-black text-amber-300 font-mono">0%</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+          <span class="block text-[10px] font-mono text-slate-400 uppercase">Acertos</span>
+          <span id="goCorrects" class="text-base font-black text-emerald-400 font-mono">0</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+          <span class="block text-[10px] font-mono text-slate-400 uppercase">Falhas Metabólicas</span>
+          <span id="goFails" class="text-base font-black text-red-400 font-mono">10</span>
+        </div>
+      </div>
+
+      <!-- Rehabilitation Card -->
+      <div class="p-4 rounded-xl bg-red-950/20 border border-red-900/40 text-left">
+        <h4 class="text-xs font-black uppercase tracking-wider text-red-300 mb-1 flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span> Nós Conceituais com Falhas na Partida:
+        </h4>
+        <ul id="goReviewPoints" class="text-xs text-slate-300 list-disc list-inside space-y-1 font-sans">
+          <!-- Populated from error log -->
+        </ul>
+      </div>
+
+      <button id="restartBtnLoss" class="w-full py-3 rounded-xl font-black font-mono tracking-wider uppercase bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-xl shadow-red-600/30 transition-all">
+        ↻ Reinjetar Pílula / Reiniciar Ciclo Farmacológico
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN B: CONGRUÊNCIA TERAPÊUTICA (VITÓRIA) -->
+  <div id="victoryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-lg hidden">
+    <div class="relative w-full max-w-3xl p-6 sm:p-8 rounded-2xl hud-glass border border-emerald-500/50 shadow-2xl text-center space-y-5">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-emerald-950/80 border border-emerald-400 flex items-center justify-center text-emerald-300 shadow-xl shadow-emerald-900/40">
+        <svg class="w-10 h-10 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      </div>
+
+      <div>
+        <h2 class="text-xl sm:text-2xl font-black tracking-wider uppercase bg-gradient-to-r from-emerald-300 via-teal-200 to-amber-300 bg-clip-text text-transparent">
+          EQUILÍBRIO TERAPÊUTICO ALCANÇADO (FASE FINAL DE ENSAIO)
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-lg mx-auto">
+          A molécula completou com louvor todas as etapas ADME, modulando os alvos biológicos com máxima especificidade e estabilizando a resposta fisiológica.
+        </p>
+      </div>
+
+      <!-- Comprehensive Stats -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 py-3 border-y border-slate-800">
+        <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+          <span class="block text-[10px] font-mono text-slate-400 uppercase">Biodisponibilidade</span>
+          <span id="vicBioavailability" class="text-base font-black text-cyan-300 font-mono">100%</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+          <span class="block text-[10px] font-mono text-slate-400 uppercase">Rendimento Global</span>
+          <span id="vicEfficiency" class="text-base font-black text-amber-300 font-mono">100%</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+          <span class="block text-[10px] font-mono text-slate-400 uppercase">Pontos Acumulados</span>
+          <span id="vicScore" class="text-base font-black text-emerald-400 font-mono">6000 pts</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+          <span class="block text-[10px] font-mono text-slate-400 uppercase">Integridade Residual</span>
+          <span id="vicRemainingHealth" class="text-base font-black text-teal-300 font-mono">10/10</span>
+        </div>
+      </div>
+
+      <!-- Academic Dossier -->
+      <div class="p-4 rounded-xl bg-emerald-950/20 border border-emerald-700/40 text-left space-y-2">
+        <h4 class="text-xs font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+          Dossiê Acadêmico & Tópicos de Síntese Clínica:
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1 text-xs">
+          <div class="p-2.5 rounded-lg bg-black/40 border border-slate-800">
+            <strong class="text-cyan-300 block mb-1">1. Farmacocinética ADME</strong>
+            <p class="text-slate-400">Cinética de estado de equilíbrio atingida após 4 a 5 meias-vidas. Relação direta entre ionização (pH) e absorção.</p>
+          </div>
+          <div class="p-2.5 rounded-lg bg-black/40 border border-slate-800">
+            <strong class="text-amber-300 block mb-1">2. Farmacodinâmica</strong>
+            <p class="text-slate-400">Especificidade de receptores acoplados a Gi, Gs e Gq, além da modulação ionotrópica rápida de GABA-A e nicotínicos.</p>
+          </div>
+          <div class="p-2.5 rounded-lg bg-black/40 border border-slate-800">
+            <strong class="text-emerald-300 block mb-1">3. Toxicologia & Segurança</strong>
+            <p class="text-slate-400">Importância de janelas terapêuticas amplas, neutralização de metabólitos tóxicos via glutationa e antídotos específicos.</p>
+          </div>
+        </div>
+      </div>
+
+      <button id="restartBtnWin" class="w-full py-3 rounded-xl font-black font-mono tracking-wider uppercase bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 shadow-xl shadow-emerald-500/30 transition-all">
+        ★ Iniciar Novo Protocolo de Estudo Farmacológico
+      </button>
+    </div>
+  </div>
+
+  <!-- Bottom Terminal Bar -->
+  <footer class="relative z-20 w-full px-4 py-2 hud-glass border-t border-slate-800 text-center text-[10px] sm:text-xs font-mono text-slate-400 flex flex-wrap items-center justify-between">
+    <span>FONTE: Farmacologia Básica e Clínica / Banco de Questões de Prova Corrigidas</span>
+    <span class="text-cyan-400">Modo de Avaliação Interativa Ativo</span>
+  </footer>
+
+  <script>
+  /* ==========================================================================
+     1. BANCO DE DADOS FARMACOLÓGICO (60 QUESTÕES RIGOROSAS BASEADAS NO PDF)
+     ========================================================================== */
+  const PHARMA_DATA = [
+    {
+      id: 1,
+      level: "Nível I: Farmacocinética",
+      topic: "Anticoagulantes & Trombolíticos",
+      statement: "A coagulação sanguínea é composta por vários eventos que dependem de fatores de coagulação. Com relação ao mecanismo de ação dos anticoagulantes e dos trombolíticos, marque a alternativa CORRETA:",
+      options: {
+        A: "Os derivados da cumarina e indandionas agem diretamente como trombolíticos por prevenirem a formação dos fatores II, VII, IX e X no fígado e por inibirem a beta-carboxilação dos seus precursores mediada pela vitamina K.",
+        B: "A heparina de baixo peso molecular é um anticoagulante superior à heparina padrão, entretanto apresenta como desvantagem meia-vida mais curta e uma distribuição menos homogênea.",
+        C: "A alteplase, também conhecida como t-PA, é um ativador de plasminogênio tecidual recombinante, utilizado como trombolítico no infarto agudo do miocárdio.",
+        D: "A ticlopidina e o ácido acetilsalicílico atuam como antiagregantes plaquetários através do mesmo mecanismo de ação molecular.",
+        E: "A varfarina atua promovendo a ativação imediata da antitrombina III, acelerando a hidrólise enzimática de coágulos preexistentes."
+      },
+      correct: "C",
+      correctExplanation: "A alteplase (t-PA recombinante) liga-se à fibrina no trombo e converte o plasminogênio retido em plasmina ativa, digerindo a fibrina e dissolvendo o coágulo formado. É indicada nas emergências cardiovasculares como no infarto agudo do miocárdio (IAM) e AVC isquêmico agudo.",
+      distractorAnalysis: {
+        A: "Incorreta. Derivados cumarínicos (varfarina) são ANTICOAGULANTES (não trombolíticos diretos) e inibem a gama-carboxilação (e não beta-carboxilação) dependente de vitamina K.",
+        B: "Incorreta. A heparina de baixo peso molecular (HBPM) possui, na verdade, MEIA-VIDA MAIS LONGA e biodisponibilidade/distribuição mais previsível e homogênea que a heparina não fracionada.",
+        D: "Incorreta. A ticlopidina atua como antagonista irreversível dos receptores P2Y12 de ADP, enquanto o ácido acetilsalicílico inibe de forma irreversível a ciclo-oxigenase-1 (COX-1), impedindo o tromboxano A2.",
+        E: "Incorreta. A varfarina inibe a enzima epóxido redutase da vitamina K no fígado e não tem qualquer ação na antitrombina III (papel desempenhado pelas heparinas)."
+      }
+    },
+    {
+      id: 2,
+      level: "Nível I: Farmacocinética",
+      topic: "Secreção Gástrica & Inibidores de Bomba",
+      statement: "Em relação aos fármacos usados para inibir ou neutralizar a secreção de ácido gástrico no trato gastrointestinal, pode-se afirmar CORRETAMENTE que:",
+      options: {
+        A: "O omeprazol administrado por via oral é absorvido e, do sangue, entra nas células parietais do estômago e, depois, nos canalículos, onde se acumula e inibe a H+K+-ATPase de forma irreversível.",
+        B: "A cimetidina é um antagonista do receptor H1 da histamina, que inibe a secreção de ácido gástrico basal, mas não é estimulada pela ingestão de alimentos.",
+        C: "A maioria dos antiácidos de uso comum são sais de alumínio e/ou magnésio, mas os sais de alumínio causam diarreia e os de magnésio, constipação.",
+        D: "O hidróxido de alumínio eleva consideravelmente o pH do suco gástrico e neutraliza a pepsina por até 48 horas ininterruptas com uma única dose.",
+        E: "Os alginatos atuam inibindo seletivamente a gastrina nas células G do antro gástrico, eliminando a acidez basal."
+      },
+      correct: "A",
+      correctExplanation: "O omeprazol é uma base fraca formulada com revestimento entérico. Após a absorção intestinal, atinge a circulação sistêmica e difunde-se para as células parietais. No ambiente extremamente ácido dos canalículos secretores gástricos, é protonado, convertendo-se em uma sulfenamida ativa que forma ligações dissulfeto covalentes irreversíveis com a bomba H+/K+-ATPase.",
+      distractorAnalysis: {
+        B: "Incorreta. A cimetidina é um antagonista de receptores H2 da histamina (e não H1, que estão envolvidos em processos alérgicos periféricos).",
+        C: "Incorreta. Os sais de alumínio causam classicamente CONSTIPAÇÃO intestinal (por relaxamento da musculatura lisa e quelação de fluidos), enquanto os sais de magnésio induzem DIARREIA osmótica.",
+        D: "Incorreta. O hidróxido de alumínio é um neutralizador local de ação curta (cerca de 30 a 60 minutos em estômago vazio), sem qualquer capacidade de manter efeito por 48 horas.",
+        E: "Incorreta. Os alginatos não inibem a gastrina; eles formam uma barreira mecânica ou 'balsa de gel' fluida no topo do conteúdo gástrico para prevenir o refluxo gastroesofágico."
+      }
+    },
+    {
+      id: 3,
+      level: "Nível I: Farmacocinética",
+      topic: "Excreção Renal & Ionização Molecular",
+      statement: "Sobre a eliminação de fármacos pelo sistema urinário e a influência do pH, analise as assertivas:\nI. Em quadros de intoxicação por excesso de droga de caráter básico, sua eliminação acontece de forma acelerada na urina com pH ácido.\nPORQUE\nII. As drogas de caráter básico tornam-se mais ionizadas no meio ácido tubular, impedindo a sua reabsorção passiva.\nAssinale a opção correta:",
+      options: {
+        A: "As duas assertivas estão corretas, e a segunda é justificativa correta da primeira.",
+        B: "Nenhuma das assertivas está correta.",
+        C: "As duas assertivas estão corretas, mas a segunda não é uma justificativa correta da primeira.",
+        D: "A primeira assertiva está correta, mas a segunda está errada.",
+        E: "A primeira assertiva está errada, mas a segunda está correta."
+      },
+      correct: "A",
+      correctExplanation: "Bases fracas em meio ácido recebem prótons (H+) e tornam-se predominantemente ionizadas (polares). Como a forma ionizada é incapaz de atravessar por difusão lipídica as membranas do epitélio tubular renal ('armadilha de íons'), a reabsorção tubular é bloqueada e o fármaco é prontamente excretado na urina.",
+      distractorAnalysis: {
+        B: "Incorreta. Ambas as assertivas são fatos físico-químicos comprovados da farmacocinética renal.",
+        C: "Incorreta. A assertiva II é exatamente a razão biofísica que explica por que a assertiva I ocorre (fenômeno de aprisionamento iônico).",
+        D: "Incorreta. A assertiva II está correta: a protonação de aminas/bases no pH baixo confere carga positiva que anula a lipossolubilidade.",
+        E: "Incorreta. A assertiva I está absolutamente correta e é conduta rotineira na manipulação de intoxicações."
+      }
+    },
+    {
+      id: 4,
+      level: "Nível I: Farmacocinética",
+      topic: "Legislação Sanitária & Registro",
+      statement: "A Resolução-RDC Nº 17/2007 define termos técnicos para registro de medicamentos: Medicamento Inovador (MI), Denominação Comum Brasileira (DCB), Denominação Comum Internacional (DCI), Medicamento Similar (MS) e Medicamento de Referência (MR). Assinale a correspondência correta:",
+      options: {
+        A: "I-MR, II-DCI, III-DCB, IV-MS, V-MI.",
+        B: "I-MI, II-DCB, III-DCI, IV-MS, V-MR.",
+        C: "I-MS, II-DCB, III-DCI, IV-MR, V-MI.",
+        D: "I-MI, II-DCI, III-DCB, IV-MR, V-MS.",
+        E: "I-MR, II-DCB, III-DCI, IV-MI, V-MS."
+      },
+      correct: "B",
+      correctExplanation: "I: Medicamento Inovador (objeto de patente ou primeiro a descrever novo mecanismo). II: Denominação Comum Brasileira (aprovada pela Anvisa). III: Denominação Comum Internacional (recomendada pela OMS). IV: Medicamento Similar (mesmos princípios, forma, dose e indicação, identificado por marca). V: Medicamento de Referência (inovador registrado cujas eficácia, segurança e qualidade foram comprovadas).",
+      distractorAnalysis: {
+        A: "Incorreta. Inverteu DCB com DCI e MR com MI no início da classificação.",
+        C: "Incorreta. O item I trata de medicamento inovador e não do similar, que possui marca própria e se espelha no de referência.",
+        D: "Incorreta. Trocou a ordem de referência e similar nas definições de identificação de marca e comprovação científica de registro.",
+        E: "Incorreta. Confunde os papéis regulatórios do medicamento de referência com inovador de mercado de origem."
+      }
+    },
+    {
+      id: 5,
+      level: "Nível I: Farmacocinética",
+      topic: "Difusão & Lei de Fick",
+      statement: "Em farmacocinética, a absorção e o transporte passivo de fármacos através das membranas biológicas são descritos pela Lei de Fick. Assinale a afirmativa CORRETA sobre este princípio:",
+      options: {
+        A: "A Lei de Fick estabelece que a densidade de fluxo de massa por difusão molecular de um componente é diretamente proporcional ao gradiente de concentração.",
+        B: "A Lei de Fick estabelece que a densidade de fluxo de massa por difusão molecular de um componente é inversamente proporcional ao gradiente de concentração.",
+        C: "A Lei de Fick estabelece que a densidade de fluxo independe da área da membrana e da solubilidade do fármaco.",
+        D: "Para os casos gerais farmacológicos, a difusão molecular através de membranas lipídicas não pode ser expressa matematicamente.",
+        E: "A difusão passiva segundo Fick requer obrigatoriamente hidrólise concomitante de trifosfato de adenosina (ATP)."
+      },
+      correct: "A",
+      correctExplanation: "De acordo com a 1ª Lei de Fick (Fluxo = (C1 - C2) x (Área x Coeficiente de Permeabilidade) / Espessura), a velocidade de difusão passiva é diretamente proporcional à diferença de concentração (gradiente) entre os dois lados da membrana e à área de superfície disponível para absorção.",
+      distractorAnalysis: {
+        B: "Incorreta. Quanto maior o gradiente de concentração, MAIOR (e não menor) será o fluxo de difusão.",
+        C: "Incorreta. O fluxo é extremamente dependente da área da superfície absortiva (como vilosidades intestinais) e do coeficiente de partição lipídio/água.",
+        D: "Incorreta. A difusão passiva é rotineiramente modelada através de equações vetoriais diferenciais clássicas.",
+        E: "Incorreta. A difusão pela Lei de Fick é um processo termodinamicamente passivo a favor do gradiente, sem qualquer consumo de energia metabólica (ATP)."
+      }
+    },
+    {
+      id: 6,
+      level: "Nível I: Farmacocinética",
+      topic: "Bioequivalência & Biodisponibilidade",
+      statement: "Dois medicamentos são considerados bioequivalentes quando apresentam equivalência farmacêutica e biodisponibilidade comparável. A respeito desse conceito, assinale a alternativa correta:",
+      options: {
+        A: "A biodisponibilidade é uma característica imutável do fármaco que independe de fatores fisiológicos do trato gastrintestinal.",
+        B: "Variações na atividade enzimática da parede intestinal ou do fígado, no pH gástrico ou na motilidade intestinal podem afetar a biodisponibilidade de medicamentos.",
+        C: "Para que dois medicamentos sejam considerados intercambiáveis, basta que tenham o mesmo princípio ativo, sem necessidade de estudos estatísticos de área sob a curva (ASC).",
+        D: "A biodisponibilidade de um medicamento administrado por via intravenosa é sempre nula devido à ausência de absorção intestinal.",
+        E: "A absorção lenta sempre produz concentrações plasmáticas máximas (Cmax) mais elevadas do que a absorção imediata."
+      },
+      correct: "B",
+      correctExplanation: "A biodisponibilidade (fração da dose administrada que atinge a circulação sistêmica na forma ativa) é modulada diretamente pelo pH do lúmen, tempo de esvaziamento gástrico, motilidade do intestino e metabolismo de primeira passagem intestinal e hepático mediado por enzimas do CYP450 e glicoproteína-P.",
+      distractorAnalysis: {
+        A: "Incorreta. A biodisponibilidade varia substancialmente de acordo com a formulação, veículo e estado fisiológico do paciente.",
+        C: "Incorreta. Para a intercambiabilidade (medicamento genérico), são mandatórios ensaios clínicos rigorosos de bioequivalência avaliando ASC e Cmax com intervalo de confiança de 90%.",
+        D: "Incorreta. Por definição farmacocinética, a biodisponibilidade por via intravenosa direta é de 100% (fração = 1,0).",
+        E: "Incorreta. Uma taxa de absorção mais lenta dispersa a chegada do fármaco no tempo, gerando um Cmax MENOR e retardado (Tmax maior)."
+      }
+    },
+    {
+      id: 7,
+      level: "Nível I: Farmacocinética",
+      topic: "Interações Fármaco-Alimento",
+      statement: "Entre as possibilidades de interações na associação de medicamentos e alimentos, existe aquela entre as tetraciclinas e os sais de cálcio ou alumínio (como em laticínios ou antiácidos), que ocorre a nível de:",
+      options: {
+        A: "Biotransformação microssomal hepática.",
+        B: "Eliminação e filtração glomerular.",
+        C: "Distribuição e ligação a albumina plasmática.",
+        D: "Absorção gastrintestinal por quelação insolúvel.",
+        E: "Degradação por hidrólise enzimática luminal."
+      },
+      correct: "D",
+      correctExplanation: "As tetraciclinas contêm grupamentos fenólicos e enólicos que se ligam avidamente a cátions polivalentes divalentes e trivalentes (como Ca2+, Mg2+, Al3+ e Fe2+), formando complexos quelatos insolúveis não absorvíveis no lúmen gastrintestinal, reduzindo drasticamente sua biodisponibilidade.",
+      distractorAnalysis: {
+        A: "Incorreta. A interação não envolve enzimas oxidativas do citocromo P450 no retículo endoplasmático.",
+        B: "Incorreta. O fenômeno ocorre no lúmen do trato digestivo antes que o fármaco sequer atinja o leito vascular renal.",
+        C: "Incorreta. Não decorre de deslocamento de sítios de ligação protéica no plasma sanguíneo.",
+        E: "Incorreta. Trata-se de uma quelação físico-química de precipitação mineral, e não de uma clivagem catalítica enzimática."
+      }
+    },
+    {
+      id: 8,
+      level: "Nível I: Farmacocinética",
+      topic: "Absorção Oral & Barreiras Biológicas",
+      statement: "Sobre os fatores que influenciam a absorção de fármacos administrados por via oral, analise a afirmativa correta:",
+      options: {
+        A: "Fármacos que são ácidos fracos encontram-se predominantemente na forma ionizada no estômago, o que maximiza sua absorção nesse órgão.",
+        B: "Fármacos de caráter básico fraco têm sua absorção favorecida no intestino delgado, pois encontram-se em maior proporção na forma não ionizada (lipossolúvel).",
+        C: "A presença de alimentos gordurosos nunca altera a taxa de dissolução ou absorção de compostos lipofílicos.",
+        D: "A velocidade e a eficiência da absorção independem por completo da forma farmacêutica (comprimido, suspensão ou solução).",
+        E: "O grau de ionização não exerce qualquer impacto na permeação pelas membranas biológicas lipídicas."
+      },
+      correct: "B",
+      correctExplanation: "Em compartimentos alcalinos como o lúmen intestinal (pH 6,5 a 7,5), as bases fracas não recebem prótons com facilidade, permanecendo em sua forma molecular desprovida de carga (não ionizada). Essa forma é altamente lipossolúvel e atravessa rapidamente a bicamada lipídica dos enterócitos.",
+      distractorAnalysis: {
+        A: "Incorreta. Ácidos fracos no pH ácido do estômago encontram-se predominantemente NÃO ionizados (pois a alta concentração de H+ desloca o equilíbrio no sentido não dissociado).",
+        C: "Incorreta. Alimentos lipídicos estimulam a secreção biliar e facilitam a solubilização de fármacos altamente hidrofóbicos, aumentando com frequência sua absorção.",
+        D: "Incorreta. A forma farmacêutica governa o tempo de desintegração e dissolução (soluções são absorvidas mais rapidamente que comprimidos revestidos).",
+        E: "Incorreta. Apenas a fração não ionizada tem lipofilia suficiente para difusão passiva através do núcleo hidrofóbico da membrana."
+      }
+    },
+    {
+      id: 9,
+      level: "Nível I: Farmacocinética",
+      topic: "Vias de Eliminação Biológica",
+      statement: "A eliminação de fármacos e seus metabólitos ocorre através de diversos fluidos e matrizes biológicas. Assinale a alternativa que contempla vias reconhecidas de eliminação farmacocinética:",
+      options: {
+        A: "Urina, fezes, saliva, suor, lágrimas e leite materno.",
+        B: "Urina, cabelo, esmalte dentário e tecido córneo exclusivamente.",
+        C: "Urina, fezes, medula óssea e cartilagem hialina.",
+        D: "Apenas urina e fezes, sendo impossível a eliminação por secreções glandulares.",
+        E: "Exclusivamente por via biliar e filtração glomerular direta sem outras vias."
+      },
+      correct: "A",
+      correctExplanation: "Embora a excreção renal (urina) e a eliminação biliar/fecal sejam as vias quantitativamente predominantes, diversos fármacos e substâncias xenobióticas são excretados também na saliva, suor, lágrimas e no leite materno (o que exige rigorosa atenção no aleitamento).",
+      distractorAnalysis: {
+        B: "Incorreta. Cabelo e unha são matrizes de deposição para análises toxicológicas forenses de acúmulo, e não vias de fluxo excretório funcional do organismo.",
+        C: "Incorreta. Medula óssea e cartilagem não são vias de secreção ou excreção biológica.",
+        D: "Incorreta. Desconsidera secreções exócrinas fundamentais como suor e leite materno.",
+        E: "Incorreta. O corpo dispõe de múltiplas rotas de eliminação além dos rins e da bile."
+      }
+    },
+    {
+      id: 10,
+      level: "Nível I: Farmacocinética",
+      topic: "Conceito Fundamental de Toxicologia",
+      statement: "A Farmacologia subdivide-se em várias áreas especializadas. A área responsável por analisar substâncias químicas que interagem com o sistema biológico causando danos e estudar formas de prevenir e tratar seus efeitos nocivos é a:",
+      options: {
+        A: "Farmacotécnica.",
+        B: "Farmacognosia.",
+        C: "Toxicologia.",
+        D: "Farmacogenômica.",
+        E: "Farmacometria."
+      },
+      correct: "C",
+      correctExplanation: "A Toxicologia é a ciência que investiga a natureza, os mecanismos, os efeitos adversos e a letalidade provocada por substâncias químicas (xenobióticos, toxinas e fármacos em superdosagem) nos organismos vivos, estabelecendo limites de segurança e antídotos.",
+      distractorAnalysis: {
+        A: "Incorreta. A Farmacotécnica ocupa-se da manipulação e preparo das formas farmacêuticas (comprimidos, pomadas, soluções).",
+        B: "Incorreta. A Farmacognosia estuda os princípios ativos de origem natural (plantas, animais e minerais).",
+        D: "Incorreta. A Farmacogenômica analisa a influência do perfil genético individual na resposta terapêutica a medicamentos.",
+        E: "Incorreta. A Farmacometria envolve a modelagem quantitativa das relações farmacocinéticas e farmacodinâmicas."
+      }
+    },
+    {
+      id: 11,
+      level: "Nível I: Farmacocinética",
+      topic: "Absorção & Fisiologia Gástrica",
+      statement: "No tratamento da gastrite e de úlceras pépticas, a mucosa estomacal inflamada demanda proteção e modulação da acidez. A respeito dos fármacos antiácidos e das formas farmacêuticas gastroprotetoras, assinale a afirmativa CORRETA:",
+      options: {
+        A: "Medicamentos antiácidos diminuem a acidez local elevando o pH gástrico, e pró-fármacos sensíveis ao ácido gástrico necessitam de revestimento entérico para evitar sua inativação pré-sistêmica no estômago.",
+        B: "Os antiácidos eliminam permanentemente a secreção de ácido nas células parietais por destruição imune da gastrina.",
+        C: "Nenhum medicamento administrado por via oral sofre degradação enzimática ou química no ambiente ácido estomacal.",
+        D: "O revestimento entérico acelera a absorção estomacal imediata do princípio ativo antes do esvaziamento para o duodeno.",
+        E: "Antiácidos atuam bloqueando irreversivelmente a bomba de sódio e potássio dos enterócitos intestinais."
+      },
+      correct: "A",
+      correctExplanation: "Antiácidos neutralizam o ácido clorídrico no lúmen gástrico elevando o pH. Fármacos ácido-lábeis (como o omeprazol) possuem revestimento entérico gastrorresistente que resiste ao pH ácido estomacal, dissolvendo-se apenas no pH mais alcalino do duodeno, onde ocorre sua absorção.",
+      distractorAnalysis: {
+        B: "Incorreta. Antiácidos são bases fracas que atuam por reação química local temporária, sem destruição celular ou imune.",
+        C: "Incorreta. Vários compostos (como penicilina G e omeprazol) são instáveis no pH gástrico e sofrem hidrólise ácida intensa.",
+        D: "Incorreta. O revestimento entérico impede a absorção no estômago, garantindo liberação apenas no intestino.",
+        E: "Incorreta. Não atuam na bomba de sódio e potássio dos enterócitos intestinais."
+      }
+    },
+    {
+      id: 12,
+      level: "Nível I: Farmacocinética",
+      topic: "Circulação Porta-Hepática & Efeito de Primeira Passagem",
+      statement: "Quanto à absorção e ao trânsito de fármacos administrados pela via oral, é CORRETO afirmar que:",
+      options: {
+        A: "Fármacos absorvidos no intestino delgado drenam para a veia porta-hepática e passam obrigatoriamente pelo fígado antes de alcançarem a circulação sistêmica.",
+        B: "A absorção enteral direciona todo o fármaco diretamente para a artéria carótida, contornando o fígado.",
+        C: "Fármacos administrados por via oral não sofrem qualquer biotransformação pré-sistêmica.",
+        D: "A absorção oral ocorre exclusivamente na mucosa jugal e na língua sem passagem pelo trato digestivo.",
+        E: "O esvaziamento gástrico lento não interfere no tempo para atingir a concentração plasmática máxima."
+      },
+      correct: "A",
+      correctExplanation: "A drenagem venosa do estômago e intestino desemboca no sistema porta-hepático. Consequentemente, todo fármaco absorvido no trato digestivo passa pelo parênquima hepático (metabolismo de primeira passagem) antes de ser distribuído pela circulação sistêmica aos tecidos periféricos.",
+      distractorAnalysis: {
+        B: "Incorreta. O fluxo mesentérico converge para a veia porta, e não para o leito arterial carotídeo.",
+        C: "Incorreta. O metabolismo de primeira passagem no epitélio intestinal e nos hepatócitos pode reduzir consideravelmente a fração ativa biodisponível.",
+        D: "Incorreta. A absorção oral clássica envolve estômago e principalmente intestino delgado; absorção sublingual é restrita a pequenas moléculas em apresentações específicas.",
+        E: "Incorreta. O retardo no esvaziamento gástrico atrasa a chegada ao intestino, aumentando o Tmax."
+      }
+    },
+    {
+      id: 13,
+      level: "Nível I: Farmacocinética",
+      topic: "Uso de Medicamentos na Lactação",
+      statement: "Sobre a administração de medicamentos no período de lactação e a passagem de substâncias para o leite materno, assinale a afirmativa CORRETA:",
+      options: {
+        A: "Fármacos administrados à mãe podem ser transferidos para o leite materno por difusão passiva, e fatores como lipossolubilidade, baixa ligação a proteínas e fração não ionizada facilitam sua excreção no leite, exigindo cautela e avaliação médica criteriosa.",
+        B: "Nenhum fármaco atravessa as glândulas mamárias em decorrência de uma barreira hematomamária impenetrável a moléculas exógenas.",
+        C: "Mulheres lactantes podem fazer uso livre de quaisquer medicamentos lipofílicos sem risco para o lactente.",
+        D: "Apenas substâncias inorgânicas são secretadas no leite materno, sendo os fármacos sintéticos totalmente bloqueados.",
+        E: "A concentração do fármaco no leite é sempre estritamente nula independentemente da dose materna administrada."
+      },
+      correct: "A",
+      correctExplanation: "O leite materno possui teor lipídico e pH ligeiramente mais ácido que o plasma (cerca de 7,0 vs 7,4). Fármacos lipossolúveis e bases fracas podem concentrar-se no leite por difusão e aprisionamento iônico, expondo o bebê a toxicidade; portanto, a prescrição em lactantes deve ser criteriosa.",
+      distractorAnalysis: {
+        B: "Incorreta. O epitélio alveolar mamário permite a passagem de inúmeros compostos lipofílicos e de baixo peso molecular.",
+        C: "Incorreta. Compostos lipofílicos passam com grande facilidade para as micelas de gordura do leite.",
+        D: "Incorreta. Inúmeros fármacos orgânicos sintéticos passam para o leite (como sedativos, antibióticos e analgésicos).",
+        E: "Incorreta. A concentração depende da farmacocinética materna, biodisponibilidade e depuração."
+      }
+    },
+    {
+      id: 14,
+      level: "Nível I: Farmacocinética",
+      topic: "Barreiras Biológicas & Transporte de Membrana",
+      statement: "Para que um fármaco chegue ao seu local de ação após a administração enteral, ele deve atravessar barreiras celulares. Sobre os mecanismos de transporte e permeabilidade transmembrana, analise as afirmativas:\nI. A permeação lipídica passiva depende do grau de ionização e do coeficiente de partição óleo/água da molécula.\nII. No transporte ativo mediado por carreadores, há consumo de energia metabólica (ATP) contra um gradiente de concentração.\nIII. No transporte passivo por difusão simples, não há gasto de energia metabólica.\nÉ CORRETO o que se afirma em:",
+      options: {
+        A: "I, II e III.",
+        B: "I e II apenas.",
+        C: "II e III apenas.",
+        D: "I apenas.",
+        E: "III apenas."
+      },
+      correct: "A",
+      correctExplanation: "Todas as assertivas são princípios basilares da biofísica e farmacocinética: a difusão passiva requer moléculas lipofílicas não ionizadas a favor do gradiente (sem gasto de ATP); já o transporte ativo primário depende de transportadores ABC com quebra direta de ATP contra gradiente químico.",
+      distractorAnalysis: {
+        B: "Incorreta. Desconsidera a assertiva III, que é correta.",
+        C: "Incorreta. Desconsidera a assertiva I, que descreve as variáveis físico-químicas cruciais da permeação.",
+        D: "Incorreta. Deixa de lado os conceitos de transporte ativo e passivo igualmente verdadeiros.",
+        E: "Incorreta. Todas as três proposições estão cientificamente fundamentadas."
+      }
+    },
+    {
+      id: 15,
+      level: "Nível I: Farmacocinética",
+      topic: "Legislação de Genéricos (Lei 9.787/1999)",
+      statement: "No Brasil, a Lei Federal nº 9.787/1999 estabeleceu as diretrizes técnicas para os medicamentos genéricos. De acordo com a referida legislação, o medicamento genérico deve:",
+      options: {
+        A: "Possuir o mesmo princípio ativo, na mesma concentração, forma farmacêutica e via de administração do medicamento de referência, demonstrando bioequivalência e eficácia comprovada.",
+        B: "Apresentar uma molécula patenteada inédita que nunca foi comercializada anteriormente no país.",
+        C: "Diferir obrigatoriamente do medicamento de referência no princípio ativo e na sua posologia indicada.",
+        D: "Dispensar a realização de quaisquer testes de controle de qualidade ou fiscalização sanitária junto à Anvisa.",
+        E: "Ser comercializado com exclusividade por laboratórios estatais sob a forma de amostras grátis."
+      },
+      correct: "A",
+      correctExplanation: "O medicamento genérico é aquele que contém o mesmo fármaco (mesmo princípio ativo), na mesma dose, concentração, forma farmacêutica e via de administração do medicamento de referência, comprovando equivalência farmacêutica e bioequivalência (intercambiabilidade) perante a Anvisa.",
+      distractorAnalysis: {
+        B: "Incorreta. Isso caracteriza um medicamento inovador de referência com patente vigente.",
+        C: "Incorreta. O princípio ativo, dose e forma farmacêutica devem ser rigorosamente idênticos aos do inovador.",
+        D: "Incorreta. A aprovação de genéricos exige rigorosos estudos in vitro (dissolução) e in vivo (bioequivalência humana).",
+        E: "Incorreta. Podem ser produzidos por qualquer indústria farmacêutica qualificada e comercializados no varejo privado e público."
+      }
+    },
+    {
+      id: 16,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Vias de Sinalização & Proteínas G",
+      statement: "Os receptores acoplados à proteína G (GPCRs) possuem vias canônicas de transdução intracelular de sinal. Em relação ao papel funcional de cada subunidade alfa, assinale a alternativa CORRETA:",
+      options: {
+        A: "As proteínas Gq ativam a adenilato ciclase, as Gi as inibem e as Gs atuam estimulando a fosfolipase C.",
+        B: "As proteínas Gi aumentam a síntese de AMP cíclico, enquanto as Gs inibem a fosfolipase C e as Gq abrem canais de potássio.",
+        C: "As proteínas Gs e Gq aumentam a expressão de fosfolipase C e as Gi ativam a adenilato ciclase.",
+        D: "As proteínas Gs e Gi reduzem a síntese de AMP cíclico, e as Gq agem na guanilato ciclase solúvel.",
+        E: "As proteínas Gs ativam a adenilato ciclase, as Gi inibem a adenilato ciclase e as Gq ativam a fosfolipase C."
+      },
+      correct: "E",
+      correctExplanation: "A proteína Gs (estimuladora) ativa a enzima efetora adenilato ciclase gerando AMP cíclico (AMPc). A Gi (inibitória) inibe a adenilato ciclase reduzindo os níveis de AMPc intracelular. A Gq ativa a fosfolipase C (PLC), que cliva o PIP2 da membrana em dois segundos mensageiros: IP3 (que libera cálcio do retículo) e DAG (diacilglicerol, que ativa a proteína quinase C).",
+      distractorAnalysis: {
+        A: "Incorreta. Atribuiu erroneamente a ativação da adenilato ciclase à Gq e o estímulo da fosfolipase C à Gs.",
+        B: "Incorreta. A proteína Gi reduz o AMP cíclico e a Gs eleva o AMP cíclico através da adenilato ciclase.",
+        C: "Incorreta. Gi inibe (nunca ativa) a adenilato ciclase, e Gs modula AMPc e não fosfolipase C.",
+        D: "Incorreta. Gs estimula a produção de AMP cíclico ativando a adenilato ciclase membranar."
+      }
+    },
+    {
+      id: 17,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Segundos Mensageiros & Fosfolipase C",
+      statement: "Existem várias enzimas efetoras responsáveis pela geração de segundos mensageiros após a ativação de receptores de membrana. A enzima responsável pela produção de Diacilglicerol (DAG) e Inositol Trifosfato (IP3) a partir de fosfolipídios de membrana é a:",
+      options: {
+        A: "Adenilato ciclase.",
+        B: "Guanilato ciclase.",
+        C: "Catalítica C mitocondrial.",
+        D: "Fosfolipase C (PLC).",
+        E: "Calmodulina quinase."
+      },
+      correct: "D",
+      correctExplanation: "A fosfolipase C (PLC, ativada por proteínas Gq ou receptores tirosina-quinase) catalisa a hidrólise do fosfatidilinositol 4,5-bisfosfato (PIP2), gerando diacilglicerol (DAG), que permanece na membrana ativando a PKC, e inositol 1,4,5-trisfosfato (IP3), que se difunde no citosol abrindo canais de cálcio.",
+      distractorAnalysis: {
+        A: "Incorreta. A adenilato ciclase é responsável por converter trifosfato de adenosina (ATP) em monofosfato cíclico de adenosina (AMPc).",
+        B: "Incorreta. A guanilato ciclase catalisa a conversão de GTP em GMP cíclico (GMPc), via associada ao relaxamento por óxido nítrico.",
+        C: "Incorreta. 'Catalítica C' não é enzima geradora de DAG.",
+        E: "Incorreta. A calmodulina é uma proteína ligante de cálcio que atua a jusante do fluxo iônico, não sendo a clivadora do PIP2."
+      }
+    },
+    {
+      id: 18,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Receptores Ionotrópicos & Influxo Iônico",
+      statement: "Os receptores ionotrópicos são canais iônicos ativados por ligantes químicos que medeiam respostas sinápticas ultrarrápidas. Em relação aos receptores nicotínicos de acetilcolina e aos receptores GABA-A, assinale a afirmativa CORRETA:",
+      options: {
+        A: "A acetilcolina promove influxo de Cl- gerando hiperpolarização, enquanto o GABA permite o influxo de Na+ causando despolarização.",
+        B: "O influxo de cloreto é reduzido quando o receptor GABA-A é ativado, e o de sódio é diminuído pela acetilcolina.",
+        C: "A acetilcolina ativa receptores ionotrópicos que promovem o influxo de Na+ na célula, e o GABA ativa receptores que promovem influxo de Cl-.",
+        D: "Os receptores de GABA-A ao serem ativados bloqueiam o canal iônico e impedem qualquer passagem eletrolítica.",
+        E: "Ambos os receptores são metabotrópicos acoplados exclusivamente à via de proteína Gs."
+      },
+      correct: "C",
+      correctExplanation: "Os receptores nicotínicos colinérgicos são canais catiônicos permeáveis predominantemente ao sódio (Na+), causando influxo de carga positiva e despolarização da membrana (potencial excitatório pós-sináptico). Já os receptores GABA-A são canais aniônicos seletivos para cloreto (Cl-), cujo influxo hiperpolariza o neurônio, deprimindo a excitabilidade.",
+      distractorAnalysis: {
+        A: "Incorreta. Inverteu as funções: ACh nicotínico conduz cátions (Na+) e GABA conduz ânions (Cl-).",
+        B: "Incorreta. A ativação de GABA-A AUMENTA o influxo de cloreto, e a ACh nicotínica AUMENTA a condutância ao sódio.",
+        D: "Incorreta. O GABA atua abrindo o poro condutor central do receptor-canal pentamérico de cloreto.",
+        E: "Incorreta. São receptores puramente ionotrópicos (canais ativados por ligantes), e não receptores acoplados à proteína G (metabotrópicos)."
+      }
+    },
+    {
+      id: 19,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Sistema Nervoso Autônomo & Simpático",
+      statement: "O sistema nervoso autônomo regula funções viscerais involuntárias. Dentre as alternativas a seguir, assinale aquela que descreve respostas decorrentes tipicamente da ativação SIMPÁTICA periférica:",
+      options: {
+        A: "Contração da pupila (miose) e estimulação da motilidade intestinal.",
+        B: "Bradicardia sinusal e broncoconstrição das vias aéreas.",
+        C: "Vasoconstrição mediada por receptores alfa-1 adrenérgicos e taquicardia via beta-1 adrenérgicos.",
+        D: "Relaxamento dos esfíncteres urinários e aumento acentuado da salivação aquosa.",
+        E: "Constrição brônquica e diminuição generalizada da pressão arterial média."
+      },
+      correct: "C",
+      correctExplanation: "A resposta simpática ('luta ou fuga') é mediada pela liberação de noradrenalina e adrenalina. Nos vasos arteriais de resistência, a estimulação dos receptores alfa-1 promove vasoconstrição; no miocárdio, a estimulação dos receptores beta-1 eleva o cronotropismo e o inotropismo (taquicardia e força contrátil), promovendo suporte hemodinâmico.",
+      distractorAnalysis: {
+        A: "Incorreta. O simpático promove midríase (dilatação pupilar por contração do músculo radial da íris via alfa-1) e diminui a motilidade gastrointestinal.",
+        B: "Incorreta. Bradicardia e broncoconstrição são respostas cardiorrespiratórias clássicas da estimulação parassimpática (via receptores muscarínicos M2 e M3).",
+        D: "Incorreta. A ativação simpática contrai o esfíncter vesical e relaxa o detrusor urinário, retendo a urina.",
+        E: "Incorreta. O simpático promove broncodilatação (relaxamento brônquico via receptores beta-2) para ampliar o fluxo ventilatório."
+      }
+    },
+    {
+      id: 20,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Biotransformação Enzimática & CYP450",
+      statement: "Dentre as reações enzimáticas de biotransformação de xenobióticos no fígado, a reação clássica de Fase I catalisada pela superfamília de monooxigenases do citocromo P450 é a:",
+      options: {
+        A: "Glicuronidação.",
+        B: "Sulfatação.",
+        C: "Acetilação.",
+        D: "Oxidação.",
+        E: "Conjugação com glutationa."
+      },
+      correct: "D",
+      correctExplanation: "As reações de biotransformação de Fase I compreendem reações de oxidação, redução e hidrólise, destinadas a introduzir ou expor um grupamento funcional polar (-OH, -NH2, -SH). As enzimas CYP450 utilizam oxigênio molecular e NADPH para promover reações oxidativas em substratos lipofílicos.",
+      distractorAnalysis: {
+        A: "Incorreta. A glicuronidação é uma clássica reação de conjugação sintética de Fase II, mediada pela enzima UDP-glicuronosiltransferase (UGT).",
+        B: "Incorreta. A sulfatação é uma reação de Fase II mediada por sulfotransferases citosólicas (SULT).",
+        C: "Incorreta. A acetilação é reação de Fase II mediada por N-acetiltransferases (NAT1 e NAT2).",
+        E: "Incorreta. A conjugação com glutationa (GSH) é uma via protetora de Fase II conduzida pela glutationa S-transferase (GST)."
+      }
+    },
+    {
+      id: 21,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Cascata Inflamatória & Inibição da COX",
+      statement: "Em quadros de infecção por vírus da dengue, o uso de ácido acetilsalicílico (AAS) é estritamente contraindicado pelo elevado risco hemorrágico. Essa contraindicação decorre da capacidade do AAS em inibir:",
+      options: {
+        A: "De forma reversível a fosfolipase A2 no endotélio capilar.",
+        B: "De forma reversível a ciclo-oxigenase 2, estimulando a agregação de hemácias.",
+        C: "A síntese de citocinas pró-inflamatórias IL-1 e TNF-alfa no fígado.",
+        D: "De forma irreversível a COX-1 plaquetária, bloqueando a formação de tromboxano A2.",
+        E: "De forma reversível a síntese de prostaciclina (PGI2) pelas células renais exclusivamente."
+      },
+      correct: "D",
+      correctExplanation: "O AAS acetila covalentemente o resíduo de serina 529 da enzima ciclo-oxigenase-1 (COX-1). As plaquetas são anucleadas e não sintetizam novas proteínas; portanto, a inibição da COX-1 e a consequente supressão do tromboxano A2 (TXA2, potente vasoconstritor e pró-agregante plaquetário) persiste por toda a vida útil da plaqueta (7 a 10 dias), potencializando hemorragias graves na dengue.",
+      distractorAnalysis: {
+        A: "Incorreta. O AAS inibe enzimas da família ciclo-oxigenase (COX) e não a fosfolipase A2 (alvo de bloqueio induzido pelos corticosteroides via anexinas).",
+        B: "Incorreta. A inibição do AAS sobre a COX-1 é covalente/irreversível, e sua ação impede (ao invés de estimular) a hemostasia primária.",
+        C: "Incorreta. A predisposição a sangramentos não advém do bloqueio de citocinas, mas do defeito funcional plaquetário direto.",
+        E: "Incorreta. Embora o AAS afete prostaciclinas em altas doses, as células endoteliais nucleadas ressíntetizam a COX, enquanto a plaqueta permanece incapacitada de gerar TXA2."
+      }
+    },
+    {
+      id: 22,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Antimicrobianos & Síntese Proteica Ribossomal",
+      statement: "Os antibióticos macrolídeos (como a azitromicina) são agentes que exercem efeito antimicrobiano através de qual mecanismo molecular específico?",
+      options: {
+        A: "Inibição irreversível da síntese de peptidoglicano na parede celular por ligação a transpeptidases.",
+        B: "Ligação reversível à subunidade ribossômica 50S, inibindo a translocação durante a síntese de proteínas bacterianas.",
+        C: "Ligação seletiva à DNA-girase (topoisomerase II), induzindo quebras da fita dupla de DNA bacteriano.",
+        D: "Desestabilização tensoativa da membrana plasmática bacteriana externa por quelação de fosfolipídios.",
+        E: "Bloqueio da enzima di-hidrofolato redutase, impedindo a rota do ácido fólico bacteriano."
+      },
+      correct: "B",
+      correctExplanation: "Os macrolídeos (azitromicina, claritromicina, eritromicina) ligam-se reversivelmente ao sítio P da subunidade 50S do ribossomo bacteriano 70S. Isso bloqueia a transpeptidação e impede a translocação do peptidil-RNAt do sítio A para o sítio P, travando o alongamento da cadeia peptídica em bactérias sensíveis.",
+      distractorAnalysis: {
+        A: "Incorreta. O bloqueio da síntese de peptidoglicano por inibição das transpeptidases (PBPs) é o mecanismo dos antibióticos beta-lactâmicos (penicilinas e cefalosporinas).",
+        C: "Incorreta. A inibição da DNA-girase e da topoisomerase IV é o mecanismo característico das fluorquinolonas (ciprofloxacino, norfloxacino).",
+        D: "Incorreta. A ruptura da membrana por ação tensoativa é exercida pelas polimixinas (colistina/polimixina B).",
+        E: "Incorreta. A inibição da di-hidrofolato redutase é mediada pelo trimetoprima."
+      }
+    },
+    {
+      id: 23,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Agonismo & Curvas de Concentração-Efeito",
+      statement: "No estudo das interações fármaco-receptor, curvas concentração-efeito comparam o comportamento de diferentes ligantes no mesmo receptor. Um fármaco que é capaz de se ligar ao sítio ativo mas não consegue alcançar a resposta tecidual máxima (Emax menor), mesmo em saturação, é classificado como:",
+      options: {
+        A: "Agonista total.",
+        B: "Agonista parcial.",
+        C: "Antagonista competitivo puro.",
+        D: "Agonista alostérico pleno.",
+        E: "Modulador transmembrana irreversível."
+      },
+      correct: "B",
+      correctExplanation: "O agonista parcial possui afinidade pelo receptor, mas sua eficácia intrínseca (atividade intrínseca entre 0 e 1) é subótima em relação a um agonista total. Por essa razão, mesmo ocupando 100% dos receptores disponíveis, produz uma resposta máxima inferior ao efeito teto do sistema.",
+      distractorAnalysis: {
+        A: "Incorreta. O agonista total (ou pleno) possui eficácia intrínseca máxima (alcança 100% do efeito biológico possível daquele tecido).",
+        C: "Incorreta. O antagonista competitivo possui afinidade, porém eficácia intrínseca nula (zero efeito estimulatório isolado).",
+        D: "Incorreta. 'Agonista pleno' é sinônimo de agonista total, que atinge o platô superior da curva de resposta.",
+        E: "Incorreta. Modulação alostérica envolve ligação em sítio topograficamente distinto do ortostérico, não sendo a definição padrão do agonista de baixa eficácia."
+      }
+    },
+    {
+      id: 24,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Homeostase Óssea & Teriparatida",
+      statement: "O paratormônio (PTH) é um regulador da homeostase do cálcio. A teriparatida é um fragmento peptídico recombinante [PTH(1-34)] utilizado clinicamente. Sobre suas características farmacológicas, assinale a opção CORRETA:",
+      options: {
+        A: "A administração crônica contínua em altas doses estimula a aposição de matriz óssea sem ativar osteoclastos.",
+        B: "Pode ser administrada confortavelmente por via oral devido a sua elevada resistência à acidez gástrica.",
+        C: "A exposição intermitente e em baixas doses de teriparatida promove o aumento da formação óssea e densidade mineral.",
+        D: "A teriparatida é contraindicada na osteoporose grave porque sua única ação é aumentar a reabsorção óssea.",
+        E: "A teriparatida atua inibindo de maneira irreversível os osteoblastos medulares."
+      },
+      correct: "C",
+      correctExplanation: "Quando administrada de forma intermitente (injeção subcutânea diária em pulso de baixa dose), a teriparatida exerce efeito anabólico ósseo predominante, estimulando a diferenciação e sobrevida dos osteoblastos em relação aos osteoclastos, aumentando a massa óssea trabecular e cortical.",
+      distractorAnalysis: {
+        A: "Incorreta. A infusão crônica e contínua de PTH estimula a liberação de RANKL e ativação osteoclástica sustentada, provocando perda óssea (osteólise).",
+        B: "Incorreta. Como todo polipeptídeo, a teriparatida é degradada enzimaticamente por proteases e desfeita pelo pH do estômago se ingerida por via oral; sua via é injetável parenteral.",
+        D: "Incorreta. Ela é formalmente indicada no tratamento de osteoporose grave com alto risco de fratura justamente por sua capacidade osteoformadora.",
+        E: "Incorreta. Ela ativa osteoblastos, promovendo síntese de colágeno tipo I e deposição mineral."
+      }
+    },
+    {
+      id: 25,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Receptores de Histamina & Farmacologia",
+      statement: "A histamina é um autacoide endógeno com ações fisiológicas diversificadas em vários tecidos. A respeito dos receptores histamínicos e de seus ligantes terapêuticos, assinale a afirmativa CORRETA:",
+      options: {
+        A: "Os fármacos que agem antagonizando os receptores H2 da histamina são utilizados clinicamente no tratamento da úlcera péptica e refluxo gástrico.",
+        B: "Os anti-histamínicos H1 são empregados como primeira linha no tratamento da constipação intestinal severa.",
+        C: "Existem exclusivamente os subtipos H1 e H2 no organismo humano, sendo inexistentes os receptores H3 e H4.",
+        D: "O alopurinol atua como potente anti-histamínico seletivo na mucosa gástrica.",
+        E: "Nenhum anti-histamínico H1 de primeira geração tem capacidade de atravessar a barreira hematoencefálica."
+      },
+      correct: "A",
+      correctExplanation: "Receptores H2 situam-se na membrana basolateral das células parietais gástricas. Seu bloqueio competitivo por fármacos anti-H2 (como cimetidina, ranitidina e famotidina) suprime a ativação da adenilato ciclase estimulada por histamina, reduzindo a secreção de ácido clorídrico.",
+      distractorAnalysis: {
+        B: "Incorreta. Anti-histamínicos H1 são indicados em rinites alérgicas, urticárias e pruridos alérgicos, não para constipação.",
+        C: "Incorreta. A literatura farmacológica identifica e caracteriza 4 subtipos de receptores: H1, H2, H3 (pré-sináptico/SNC) e H4 (células hematopoiéticas).",
+        D: "Incorreta. O alopurinol é um inibidor da xantina oxidase utilizado para diminuir os níveis de ácido úrico na gota.",
+        E: "Incorreta. Anti-histamínicos de 1ª geração (como hidroxizina e prometazina) atravessam avidamente o SNC, provocando sonolência e sedação marcantes."
+      }
+    },
+    {
+      id: 26,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Fármacos da Junção Neuromuscular",
+      statement: "Os agentes farmacológicos que atuam na placa motora esquelética modulam a neurotransmissão entre os neurônios motores somáticos e as fibras musculares. A principal indicação clínica dos bloqueadores neuromusculares é:",
+      options: {
+        A: "Relaxamento da musculatura esquelética para intubação endotraqueal e cirurgias.",
+        B: "Tratamento de manutenção de crises de asma brônquica crônica.",
+        C: "Correção de quadros de hipertensão arterial primária.",
+        D: "Manejo farmacológico da disfunção erétil psicogênica.",
+        E: "Tratamento ambulatorial de transtornos de ansiedade generalizada."
+      },
+      correct: "A",
+      correctExplanation: "Os bloqueadores neuromusculares (tanto os adespolarizantes como rocurônio e vecurônio, quanto os despolarizantes como a succinilcolina) bloqueiam os receptores nicotínicos musculares (Nm) na placa motora, promovendo paralisia e relaxamento muscular essenciais para facilitar a intubação orotraqueal e intervenções cirúrgicas.",
+      distractorAnalysis: {
+        B: "Incorreta. Na asma utilizam-se broncodilatadores beta-2 adrenérgicos e anticolinérgicos inalatórios, e não paralisantes neuromusculares somáticos.",
+        C: "Incorreta. Bloqueadores neuromusculares não possuem indicação terapêutica em hipertensão arterial.",
+        D: "Incorreta. O tratamento da disfunção erétil emprega inibidores da fosfodiesterase-5 (como a sildenafila).",
+        E: "Incorreta. Transtornos de ansiedade são manejados com ansiolíticos (benzodiazepínicos e ISRS)."
+      }
+    },
+    {
+      id: 27,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Antieméticos & Seletividade Receptora",
+      statement: "Os fármacos antieméticos exercem controle sobre o centro do vômito e a zona de gatilho quimiorreceptora (ZQG). A respeito dos diferentes grupos antieméticos, assinale a afirmação INCORRETA:",
+      options: {
+        A: "Antagonistas dos receptores 5-HT3 de serotonina incluem a domperidona, que atua como bloqueador serotonérgico puro.",
+        B: "Antagonistas de receptores histamínicos H1, como a prometazina, frequentemente provocam sonolência e sedação central.",
+        C: "Antagonistas colinérgicos muscarínicos, como a escopolamina, provocam bloqueio parassimpático com boca seca e retenção urinária.",
+        D: "Antagonistas dopaminérgicos D2, como a metoclopramida, podem deflagrar efeitos extrapiramidais e distonias agudas.",
+        E: "Antagonistas dos receptores de neurocinina-1 (NK1), como o aprepitanto, destacam-se no controle da êmese tardia induzida por quimioterapia."
+      },
+      correct: "A",
+      correctExplanation: "A afirmação A é INCORRETA: a domperidona é um antagonista periférico dos receptores DOPAMINÉRGICOS D2 (com ação pró-cinética e antiemética) e não um antagonista 5-HT3 de serotonina. Os antagonistas clássicos dos receptores 5-HT3 são as 'setronas' (ondansetrona, granisetrona e palonosetrona).",
+      distractorAnalysis: {
+        B: "Incorreta. Proposição correta no contexto clínico: a prometazina atravessa a barreira hematoencefálica e causa sonolência pronunciada.",
+        C: "Incorreta. Proposição correta: o bloqueio muscarínico sistêmico por escopolamina induz sintomas anticolinérgicos clássicos.",
+        D: "Incorreta. Proposição correta: o bloqueio de receptores D2 estriatais pela metoclopramida pode provocar manifestações extrapiramidais.",
+        E: "Incorreta. Proposição correta: os antagonistas de NK1 (aprepitanto) são padrão-ouro para êmese tardia em oncologia."
+      }
+    },
+    {
+      id: 28,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Hipertensão Simpaticomimética & Prazosina",
+      statement: "A sobredosagem aguda por drogas de abuso simpaticomiméticas (como anfetaminas ou cocaína) cursa com hiperativação adrenérgica maciça e crises hipertensivas severas. O controle farmacológico dessa vasoconstrição periférica excessiva pode ser obtido com:",
+      options: {
+        A: "Dobutamina.",
+        B: "Prazosina.",
+        C: "Ipratrópio.",
+        D: "Pralidoxima.",
+        E: "Piridostigmina."
+      },
+      correct: "B",
+      correctExplanation: "A prazosina é um antagonista seletivo dos receptores alfa-1 adrenérgicos póssinápticos. Ao bloquear a ação da noradrenalina nos receptores alfa-1 da musculatura lisa vascular arterial e venosa, impede o influxo de cálcio intracelular, promovendo vasodilatação e redução imediata da resistência vascular periférica.",
+      distractorAnalysis: {
+        A: "Incorreta. A dobutamina é um agonista predominantemente beta-1 adrenérgico inotrópico positivo, o que agravaria ainda mais a sobrecarga cardiovascular.",
+        C: "Incorreta. O ipratrópio é um antagonista muscarínico inalatório empregado no broncoespasmo pulmonar.",
+        D: "Incorreta. A pralidoxima é um reativador da acetilcolinesterase utilizado em intoxicações agudas por organofosforados.",
+        E: "Incorreta. A piridostigmina é um inibidor reversível da colinesterase indicado na miastenia gravis."
+      }
+    },
+    {
+      id: 29,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Cinética Sináptica de Neurotransmissores",
+      statement: "Após a despolarização pré-sináptica e exocitose na fenda sináptica, a sinalização biológica dos neurotransmissores deve ser prontamente cessada para permitir nova transmissão de impulsos. Esse encerramento fisiológico ocorre principalmente por:",
+      options: {
+        A: "Degradação enzimática na fenda sináptica e/ou recaptação ativa pela terminação nervosa pré-sináptica.",
+        B: "Filtração glomerular direta na microcirculação cerebral exclusiva.",
+        C: "Inativação por conjugação com albumina na membrana pós-sináptica.",
+        D: "Polimerização irreversível dos neurotransmissores em cristais proteicos na fenda.",
+        E: "Transformação espontânea do transmissor em ATP intracelular."
+      },
+      correct: "A",
+      correctExplanation: "A sinalização sináptica é encerrada por mecanismos bem definidos: clivagem enzimática local (como a hidrólise da acetilcolina pela acetilcolinesterase) ou recaptação neuronal pré-sináptica mediada por carreadores específicos dependentes de sódio (como NET para noradrenalina e SERT para serotonina).",
+      distractorAnalysis: {
+        B: "Incorreta. A filtração renal opera na circulação sistêmica e não na microarquitetura das fendas sinápticas cerebrais.",
+        C: "Incorreta. Albumina é uma macromolécula plasmática que não atua degradando ou conjugando neurotransmissores na membrana pós-sináptica.",
+        D: "Incorreta. Não existe polimerização cristalina de neurotransmissores no encéfalo.",
+        E: "Incorreta. Neurotransmissores não são convertidos termodinamicamente de forma espontânea em ATP."
+      }
+    },
+    {
+      id: 30,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Simpaticomiméticos & Efeitos Cardiovasculares",
+      statement: "As catecolaminas endógenas (adrenalina, noradrenalina e dopamina) mediam respostas de alerta simpático. O efeito cardiovascular adverso agudo mais comum decorrente da hiperestimulação desses agentes simpaticomiméticos é a:",
+      options: {
+        A: "Taquicardia.",
+        B: "Bradicardia sinusal.",
+        C: "Hipotensão postural intensa.",
+        D: "Broncoconstrição com estridor laríngeo.",
+        E: "Constipação intestinal aguda imediata."
+      },
+      correct: "A",
+      correctExplanation: "A ativação dos receptores beta-1 adrenérgicos no nó sinoatrial e no miocárdio ventricular estimula a via Gs-adenilato ciclase-AMPc-PKA, aumentando as correntes de marca-passo (corrente If) e de cálcio, elevando acentuadamente o cronotropismo e deflagrando taquicardia sinusal e arritmias.",
+      distractorAnalysis: {
+        B: "Incorreta. Bradicardia é típica de estimulação parassimpática vagal (via receptor muscarínico M2 cardíaco).",
+        C: "Incorreta. Simpaticomiméticos provocam elevação da pressão arterial (hipertensão) e não hipotensão primária.",
+        D: "Incorreta. A estimulação adrenérgica pulmonar atua nos receptores beta-2 promovendo broncodilatação e relaxamento.",
+        E: "Incorreta. Embora reduza a motilidade gastrointestinal, a taquicardia é a manifestação cardiovascular aguda clássica e prevalente."
+      }
+    },
+    {
+      id: 31,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Mecanismo dos Agentes Laxantes Osmóticos",
+      statement: "A constipação intestinal pode ser manejada por diferentes classes terapêuticas. Os fármacos laxativos que atuam retendo água no lúmen colônico por força osmótica mediada por solutos pouco absorvíveis, estimulando o peristaltismo por distensão mecânica, são classificados como:",
+      options: {
+        A: "Laxantes osmóticos (como sais de magnésio e lactulose).",
+        B: "Laxantes estimulantes ou irritantes da mucosa (como sene e bisacodil).",
+        C: "Agentes emolientes lubrificantes (como óleo mineral).",
+        D: "Agentes formadores de massa fibrosa exclusivamente insolúvel.",
+        E: "Inibidores seletivos da recaptação de serotonina entérica."
+      },
+      correct: "A",
+      correctExplanation: "Laxantes osmóticos (sulfato de magnésio, hidróxido de magnésio, polietilenoglicol e lactulose) são substâncias pouco absorvidas que criam um gradiente osmótico no lúmen, atraindo água para a luz intestinal. A hidratação e o aumento do volume das fezes ativam reflexos miocárdicos de peristaltismo por distensão da parede do cólon.",
+      distractorAnalysis: {
+        B: "Incorreta. Laxantes estimulantes agem por irritação direta do plexo mioentérico e estimulação da secreção ativa de água e eletrólitos.",
+        C: "Incorreta. O óleo mineral atua lubrificando e amolecendo a massa fecal, sem criar pressão osmótica expressiva.",
+        D: "Incorreta. Formadores de massa (como farelo e psyllium) absorvem água aumentando o bolo fecal, mas o conceito fisiológico de retenção por soluto iônico define os osmóticos.",
+        E: "Incorreta. Não operam como inibidores da recaptação de neurotransmissores."
+      }
+    },
+    {
+      id: 32,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Modulação de Receptores GABA-A & Benzodiazepínicos",
+      statement: "Os receptores GABA-A são complexos macromoleculares pentaméricos que controlam canais de cloreto. A respeito dos moduladores alostéricos positivos que atuam nesses sítios, assinale a afirmativa CORRETA:",
+      options: {
+        A: "Os benzodiazepínicos (como o midazolam) são comumente empregados em pequenos procedimentos diagnósticos e cirúrgicos por induzirem sedação e amnésia anterógrada de início rápido e curta ação.",
+        B: "Os barbitúricos possuem índice terapêutico muito superior e são infinitamente mais seguros que os benzodiazepínicos contra depressão respiratória fatal.",
+        C: "Os benzodiazepínicos atuam fechando o canal de cloreto e impedindo a ação inibitória natural do GABA.",
+        D: "O fenobarbital é o fármaco de primeira escolha para quadros agudos de ansiedade leve em razão da ausência total de sedação.",
+        E: "Os benzodiazepínicos constituem monoterapia curativa de primeira escolha para a depressão maior unipolar."
+      },
+      correct: "A",
+      correctExplanation: "Benzodiazepínicos ligam-se a um sítio alostérico específico na interface alfa/gama do receptor GABA-A, aumentando a frequência de abertura do canal na presença de GABA. Moléculas de curta ação como o midazolam provocam sedação consciente, ansiólise e amnésia anterógrada imediata, perfeitas para endoscopias e procedimentos rápidos.",
+      distractorAnalysis: {
+        B: "Incorreta. Barbitúricos possuem margem de segurança estreita, pois em doses elevadas abrem diretamente os canais de cloreto sem precisar de GABA, induzindo coma e parada respiratória.",
+        C: "Incorreta. Eles potencializam a abertura do canal e aumentam o influxo inibitório de cloreto.",
+        D: "Incorreta. O fenobarbital é um barbitúrico de ação longa com pronunciado efeito sedativo e indutor enzimático, usado na epilepsia.",
+        E: "Incorreta. Benzodiazepínicos não tratam a base fisiopatológica da depressão e podem até agravá-la se usados em monoterapia crônica."
+      }
+    },
+    {
+      id: 33,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Controle da Pressão & Modulação Simpática",
+      statement: "A redução farmacológica da pressão arterial pode ser alcançada modulando o tônus adrenérgico. Os fármacos PROPRANOLOL, PRAZOSINA e CLONIDINA atuam no sistema autonômico através dos seguintes mecanismos, respectivamente:",
+      options: {
+        A: "Bloqueio de receptores beta-adrenérgicos, bloqueio de receptores alfa-1 adrenérgicos e estimulação de receptores alfa-2 adrenérgicos centrais.",
+        B: "Abertura de canais de potássio, bloqueio de canais de cálcio e liberação direta de óxido nítrico.",
+        C: "Liberação de óxido nítrico, inibição de receptores beta e bloqueio muscarínico.",
+        D: "Bloqueio de receptores alfa-2 adrenérgicos centrais, estimulação beta e antagonismo de canais de cálcio.",
+        E: "Inibição de canais de sódio, abertura de canais de cloreto e inibição da renina plasmática."
+      },
+      correct: "A",
+      correctExplanation: "O propranolol é um betabloqueador não seletivo (antagonista beta-1 e beta-2). A prazosina é um antagonista seletivo dos receptores vasculares alfa-1 adrenérgicos. A clonidina é um agonista parcial alfa-2 adrenérgico de ação central no tronco encefálico, diminuindo a eferência simpática periférica global.",
+      distractorAnalysis: {
+        B: "Incorreta. A clonidina não é liberadora de óxido nítrico e prazosina não bloqueia canais de cálcio.",
+        C: "Incorreta. Erra completamente a classificação farmacológica dos três agentes anti-hipertensivos.",
+        D: "Incorreta. A clonidina é agonista (e não bloqueador) dos receptores alfa-2 pré-sinápticos inibitórios centrais.",
+        E: "Incorreta. Não corresponde aos mecanismos de ação dos fármacos citados."
+      }
+    },
+    {
+      id: 34,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Precursor da Cascata dos Eicosanoides",
+      statement: "Durante a resposta inflamatória tecidual, mediadores lipídicos eicosanoides (prostaglandinas, tromboxanos e leucotrienos) são liberados para modular o tônus vascular, o edema e a nocicepção. O principal substrato precursor lipídico desses eicosanoides na membrana celular é o:",
+      options: {
+        A: "Ácido araquidônico.",
+        B: "Fosfolipídio fosfatidilcolina inalterado.",
+        C: "Ácido lático citossólico.",
+        D: "Ácido acetilsalicílico intracelular.",
+        E: "Colesterol livre da membrana plasmática."
+      },
+      correct: "A",
+      correctExplanation: "Em resposta a estímulos químicos ou lesão, a enzima fosfolipase A2 (PLA2) cliva os fosfolipídios de membrana, liberando ácido araquidônico (ácido eicosatetraenoico de 20 carbonos). A partir do ácido araquidônico livre, as vias da COX geram prostanoides e a via da 5-lipoxigenase gera leucotrienos.",
+      distractorAnalysis: {
+        B: "Incorreta. O fosfolipídio de membrana precisa ser enzimaticamente clivado pela PLA2 para liberar a cadeia livre de ácido araquidônico.",
+        C: "Incorreta. O ácido lático é um subproduto da glicólise anaeróbia tecidual, sem relação com os eicosanoides.",
+        D: "Incorreta. O AAS é um fármaco exógeno sintético inibidor enzimático e não um precursor biológico.",
+        E: "Incorreta. O colesterol é precursor de hormônios esteroides e sais biliares, mas não dos eicosanoides."
+      }
+    },
+    {
+      id: 35,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Antidiabéticos Orais da Classe das Sulfonilureias",
+      statement: "No manejo farmacológico do Diabetes Mellitus tipo 2, diferentes classes atuam estimulando a secreção de insulina endógena pelas células beta do pâncreas. Assinale a alternativa que contenha APENAS fármacos pertencentes à classe das SULFONILUREIAS:",
+      options: {
+        A: "Glibenclamida e glimepirida.",
+        B: "Glibenclamida e metformina.",
+        C: "Glipizida e pioglitazona.",
+        D: "Saxagliptina e acarbose.",
+        E: "Dapagliflozina e liraglutida."
+      },
+      correct: "A",
+      correctExplanation: "A glibenclamida, glimepirida e glipizida são antidiabéticos da classe das sulfonilureias. Elas ligam-se aos receptores SUR1 dos canais de K+ sensíveis ao ATP nas células beta pancreáticas, fechando esses canais, despolarizando a membrana e estimulando a exocitose de insulina.",
+      distractorAnalysis: {
+        B: "Incorreta. A metformina pertence à classe das biguanidas (sensibilizadora hepática de insulina).",
+        C: "Incorreta. A pioglitazona é uma tiazolidinediona (glitazona, agonista do receptor PPAR-gama).",
+        D: "Incorreta. A saxagliptina é um inibidor da enzima DPP-4 e a acarbose é um inibidor da alfa-glicosidase intestinal.",
+        E: "Incorreta. Dapagliflozina é inibidor do SGLT2 renal e liraglutida é análogo do peptídeo GLP-1."
+      }
+    },
+    {
+      id: 36,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Mecanismo Anti-inflamatório dos AINEs Clássicos",
+      statement: "Os Anti-inflamatórios Não Esteroidais (AINEs) clássicos exercem suas ações analgésicas, antipiréticas e anti-inflamatórias primariamente através do seguinte mecanismo molecular:",
+      options: {
+        A: "Inibição da via das ciclo-oxigenases (COX-1 e COX-2), bloqueando a síntese de prostaglandinas e tromboxanos.",
+        B: "Inibição seletiva e direta da fosfolipase A2 na membrana plasmática de macrófagos.",
+        C: "Estimulação das enzimas lipoxigenases com aumento na produção de leucotrienos broncoconstritores.",
+        D: "Bloqueio dos receptores ionotrópicos NMDA no corno dorsal medular.",
+        E: "Degradação enzimática direta das interleucinas IL-1 e IL-6 circulantes."
+      },
+      correct: "A",
+      correctExplanation: "Os AINEs clássicos (como ibuprofeno, cetoprofeno, diclofenaco e naproxeno) inibem de maneira reversível ou inespecífica as isoenzimas ciclo-oxigenase (COX-1 e COX-2), impedindo a conversão de ácido araquidônico em prostaglandina H2 (PGH2) e derivados pró-inflamatórios.",
+      distractorAnalysis: {
+        B: "Incorreta. A inibição indireta da fosfolipase A2 através da indução da lipocortina-1 (anexina-1) é o mecanismo dos glicocorticoides esteroidais (AIES).",
+        C: "Incorreta. A inibição da COX não estimula a lipoxigenase por ação direta, embora possa desviar substrato.",
+        D: "Incorreta. O bloqueio dos receptores NMDA não é o mecanismo de ação dos AINEs clássicos.",
+        E: "Incorreta. AINEs não degradam proteoliticamente citocinas plasmáticas."
+      }
+    },
+    {
+      id: 37,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Fisiologia Vascular no Processo Inflamatório",
+      statement: "A resposta inflamatória aguda é acompanhada por eventos hemodinâmicos e microvasculares sequenciais clássicos. Dentre as alternativas a seguir, assinale a que descreve as alterações vasculares fundamentais da inflamação aguda:",
+      options: {
+        A: "Vasodilatação arteriolar inicial, aumento na permeabilidade venular capilar e estase sanguínea tardia com marginação leucocitária.",
+        B: "Vasoconstrição crônica sustentada, redução drástica na permeabilidade e ausência total de exsudação proteica.",
+        C: "Vasoconstrição capilar com aceleração permanente do fluxo eritrocitário sem migração de células de defesa.",
+        D: "Obliferação dos vasos linfáticos locais e diminuição no número de receptores de histamina no endotélio.",
+        E: "Vasodilatação exclusiva com impermeabilidade vascular absoluta a proteínas e água."
+      },
+      correct: "A",
+      correctExplanation: "A inflamação aguda caracteriza-se por vasodilatação (que eleva o fluxo local causando calor e rubor), abertura de fendas interendoteliais mediada por histamina/cininas com aumento da permeabilidade capilar (exsudação proteica e edema) e posterior estase circulatória, favorecendo a adesão e diapedese de neutrófilos.",
+      distractorAnalysis: {
+        B: "Incorreta. Ocorre vasodilatação sustentada e expressivo AUMENTO da permeabilidade vascular.",
+        C: "Incorreta. O fluxo desacelera (estase) para permitir a interação dos leucócitos com selectinas e integrinas endoteliais.",
+        D: "Incorreta. Os vasos linfáticos proliferam e drenam o excesso de líquido exsudado para os linfonodos regionais.",
+        E: "Incorreta. A perda de integridade com passagem de albumina e fibrinogênio é marca patognomônica da permeabilidade inflamatória."
+      }
+    },
+    {
+      id: 38,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Objeto de Estudo da Farmacodinâmica",
+      statement: "A Farmacologia diferencia conceitualmente Farmacocinética de Farmacodinâmica. O escopo central de investigação da FARMACODINÂMICA compreende:",
+      options: {
+        A: "Os mecanismos bioquímicos e moleculares da ação dos fármacos, caracterização de receptores, transdução de sinais e a relação entre concentração e efeito biológico.",
+        B: "O tempo de trânsito gastrointestinal, cálculo do volume aparente de distribuição e clearance renal exclusivamente.",
+        C: "A quantificação de perdas por absorção e determinação da taxa de esvaziamento gástrico.",
+        D: "O desenvolvimento de veículos lipossomais e métodos industriais de compressão de pós farmacotécnicos.",
+        E: "A regulação alfandegária e registro governamental de preços de medicamentos similares."
+      },
+      correct: "A",
+      correctExplanation: "A Farmacodinâmica estuda o que o fármaco faz com o organismo: seus sítios de fixação, afinidade, eficácia intrínseca, modulação de receptores, canais iônicos, enzimas e vias de segundos mensageiros, bem como as respostas terapêuticas ou tóxicas resultantes.",
+      distractorAnalysis: {
+        B: "Incorreta. Volume de distribuição, clearance e tempo de trânsito são parâmetros típicos da Farmacocinética (o que o corpo faz com o fármaco).",
+        C: "Incorreta. Absorção e esvaziamento gástrico são etapas farmacocinéticas.",
+        D: "Incorreta. Formulação e métodos de compressão pertencem à Farmacotécnica industrial.",
+        E: "Incorreta. Regulação econômica de preços é matéria de economia e regulação sanitária."
+      }
+    },
+    {
+      id: 39,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Fármacos Laxativos & Classes Terapêuticas",
+      statement: "Na farmacologia gastrointestinal, a indicação de laxantes deve obedecer à sua classificação funcional. Assinale a correta associação entre a classe farmacológica e o princípio ativo representativo:",
+      options: {
+        A: "Agente emoliente ou umectante fecal - Óleo mineral.",
+        B: "Agente irritante ou estimulante da motilidade - Macrogol (PEG).",
+        C: "Agente osmótico clássico - Bisacodil.",
+        D: "Agente emoliente lubrificante - Lactulose pura.",
+        E: "Agente modulador dopaminérgico pró-cinético - Sene."
+      },
+      correct: "A",
+      correctExplanation: "O óleo mineral (vaselina líquida) é um hidrocarboneto alifático insolúvel que atua como laxante emoliente/lubrificante: reveste a massa fecal, retarda a reabsorção de água pelo epitélio colônico e facilita a passagem do bolo fecal pelo reto.",
+      distractorAnalysis: {
+        B: "Incorreta. O macrogol (polietilenoglicol) é um laxante osmótico e não estimulante irritante.",
+        C: "Incorreta. O bisacodil é um laxante estimulante de contato que age no plexo nervoso da mucosa.",
+        D: "Incorreta. A lactulose é um dissacarídeo sintético não absorvível de ação puramente osmótica.",
+        E: "Incorreta. O sene contém derivados antraquinônicos que atuam como laxantes estimulantes irritantes locais."
+      }
+    },
+    {
+      id: 40,
+      level: "Nível II: Farmacodinâmica",
+      topic: "Terapêutica da Asma & Broncodilatação Anticolinérgica",
+      statement: "Em pacientes com asma brônquica ou DPOC em uso de agonistas beta-2 adrenérgicos inalatórios (como o salbutamol), a associação de um broncodilatador anticolinérgico inalatório para potencializar o relaxamento muscular atua através do princípio ativo:",
+      options: {
+        A: "Brometo de ipratrópio.",
+        B: "Propranolol oral.",
+        C: "Dobutamina parenteral.",
+        D: "Clonidina central.",
+        E: "Isoproterenol sistêmico."
+      },
+      correct: "A",
+      correctExplanation: "O brometo de ipratrópio é um derivado de amônio quaternário que atua como antagonista competitivo dos receptores muscarínicos M3 na musculatura lisa brônquica, bloqueando o tônus colinérgico vagal broncoconstritor e a hipersecreção de muco, somando-se à ação dilatadora do salbutamol.",
+      distractorAnalysis: {
+        B: "Incorreta. O propranolol é um betabloqueador não seletivo formalmente CONTRAINDICADO na asma por provocar broncoespasmo grave.",
+        C: "Incorreta. A dobutamina é um inotrópico adrenérgico cardíaco, sem uso na terapia inalatória da asma.",
+        D: "Incorreta. A clonidina é anti-hipertensivo de ação central.",
+        E: "Incorreta. O isoproterenol é um agonista beta não seletivo potente com taquicardia desfavorável, e não um anticolinérgico."
+      }
+    },
+    {
+      id: 41,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Cinética de Infusão & Estado de Equilíbrio",
+      statement: "Durante uma infusão intravenosa contínua de velocidade constante (dose por unidade de tempo), a concentração plasmática no estado de equilíbrio (steady-state, Css) é alcançada quando:",
+      options: {
+        A: "A absorção enteral cessa por saturação de carreadores.",
+        B: "A taxa de administração se iguala à taxa de eliminação do fármaco.",
+        C: "Após exatamente 1 único tempo de meia-vida biológica da substância.",
+        D: "A taxa de eliminação torna-se superior à taxa de infusão venosa.",
+        E: "O volume aparente de distribuição atinge o limite zero absoluto."
+      },
+      correct: "B",
+      correctExplanation: "No estado de equilíbrio dinâmico (steady-state), a quantidade de fármaco que entra no organismo por unidade de tempo é estritamente igual à quantidade eliminada no mesmo intervalo (Taxa de Entrada = Taxa de Saída). Em cinética linear de primeira ordem, o platô de equilíbrio é alcançado após cerca de 4 a 5 meias-vidas de infusão contínua.",
+      distractorAnalysis: {
+        A: "Incorreta. Na infusão intravenosa direta não há absorção gastrointestinal; o fármaco entra diretamente no compartimento vascular central.",
+        C: "Incorreta. Após 1 meia-vida atinge-se apenas 50% da concentração do platô; são necessárias de 4 a 5 meias-vidas para atingir >93-97% do Css.",
+        D: "Incorreta. Se a taxa de eliminação superasse a taxa de infusão, a concentração plasmática estaria em declínio, descaracterizando o estado de equilíbrio estável.",
+        E: "Incorreta. O volume de distribuição é um parâmetro fisiológico que reflete a dispersão tecidual e permanece constante na cinética linear."
+      }
+    },
+    {
+      id: 42,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Farmacovigilância & Fases da Pesquisa Clínica",
+      statement: "O desenvolvimento de novos medicamentos compreende etapas pré-clínicas e clínicas rigorosas. A fase de pesquisa responsável pela Farmacovigilância, que monitora a segurança, reações adversas raras e efetividade populacional APÓS a comercialização em larga escala, é a:",
+      options: {
+        A: "Fase I.",
+        B: "Fase II.",
+        C: "Fase III.",
+        D: "Fase IV.",
+        E: "Fase Pré-Clínica in vitro."
+      },
+      correct: "D",
+      correctExplanation: "A Fase IV (estudos pós-comercialização ou vigilância epidemiológica pós-registro) avalia o desempenho do fármaco no 'mundo real' em populações heterogêneas amplas, identificando efeitos adversos incomuns, interações medicamentosas não detectadas em ensaios controlados e segurança em longo prazo.",
+      distractorAnalysis: {
+        A: "Incorreta. A Fase I avalia a segurança inicial, tolerabilidade e parâmetros farmacocinéticos basais em um número pequeno de voluntários sadios (20 a 80 indivíduos).",
+        B: "Incorreta. A Fase II testa a eficácia preliminar e faixa de dose terapêutica em pacientes acometidos pela patologia-alvo (100 a 300 pacientes).",
+        C: "Incorreta. A Fase III engloba ensaios clínicos controlados e randomizados de grande porte (multicêntricos com milhares de pacientes) para confirmação de eficácia antes do registro sanitário.",
+        E: "Incorreta. A fase pré-clínica ocorre em sistemas de cultura celular e modelos animais antes de qualquer administração em seres humanos."
+      }
+    },
+    {
+      id: 43,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Janela & Índice Terapêutico",
+      statement: "O conceito de índice terapêutico (IT = DL50/DE50 ou DT50/DE50) reflete a margem de segurança de um agente farmacológico. Sob o ponto de vista da segurança clínica de prescrição, um fármaco será considerado mais seguro quando:",
+      options: {
+        A: "Seu índice terapêutico for zero e sua janela terapêutica for extremamente estreita.",
+        B: "Seu índice terapêutico for baixo e sua concentração plasmática tóxica for próxima à mínima eficaz.",
+        C: "Seu índice terapêutico for alto e sua janela terapêutica for larga.",
+        D: "Seu índice terapêutico for baixo e sua depuração renal for inexistente.",
+        E: "A dose requerida para produzir letalidade for inferior à dose necessária para induzir eficácia."
+      },
+      correct: "C",
+      correctExplanation: "Um índice terapêutico elevado indica que a dose requerida para desencadear toxicidade grave ou letalidade está muito distante da dose eficaz necessária para o benefício terapêutico. Uma janela terapêutica larga permite flutuações de concentração plasmática sem risco iminente de sobredosagem tóxica ou subdosagem ineficaz.",
+      distractorAnalysis: {
+        A: "Incorreta. Janela estreita exige monitorização plasmática rigorosa (como na digoxina e lítio) devido ao alto risco de toxicidade grave.",
+        B: "Incorreta. IT baixo significa que qualquer pequena oscilação posológica pode precipitar quadros de toxicidade severa.",
+        D: "Incorreta. Fármacos com índice baixo apresentam baixa margem de tolerância clínica.",
+        E: "Incorreta. Se a dose tóxica for menor ou próxima da dose eficaz, o fármaco é excessivamente arriscado ou inutilizável clinicamente."
+      }
+    },
+    {
+      id: 44,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Toxicologia & Superdosagem de Paracetamol",
+      statement: "Em quadros de superdosagem aguda por paracetamol (acetaminofeno), a necrose hepatocelular fulminante decorre primariamente de qual mecanismo bioquímico?",
+      options: {
+        A: "Inibição total e irreversível da medula óssea por ativação de linfócitos T citotóxicos.",
+        B: "Vasoconstrição coronariana aguda com choque cardiogênico isquêmico irreversível.",
+        C: "Saturação das vias de conjugação (glicuronidação/sulfatação) com produção excessiva do metabólito reativo NAPQI, que esgota a glutationa hepática e liga-se covalentemente a proteínas celulares.",
+        D: "Hiperativação direta dos receptores colinérgicos muscarínicos nas ilhotas pancreáticas.",
+        E: "Inibição seletiva da excreção tubular de ureia e consequente uremia tóxica imediata."
+      },
+      correct: "C",
+      correctExplanation: "Em doses terapêuticas, o paracetamol é conjugado em sulfato e glicuronídeo. Em superdosagem, essas vias saturam-se e uma fração maior é oxidada pelo CYP2E1 no metabólito altamente eletrofílico NAPQI (N-acetil-p-benzoquinona imina). O NAPQI esgota os estoques de glutationa (GSH) mitocondrial e liga-se a macromoléculas dos hepatócitos, deflagrando necrose hepática centrolobular maciça. O antídoto N-acetilcisteína atua restabelecendo a glutationa.",
+      distractorAnalysis: {
+        A: "Incorreta. A lesão principal é hepatocelular tóxica direta, e não aplasia de medula óssea imunoalérgica.",
+        B: "Incorreta. A toxicidade do paracetamol é primariamente hepática (e secundariamente renal), não provocando choque coronariano primário.",
+        D: "Incorreta. O mecanismo não envolve receptores muscarínicos do pâncreas.",
+        E: "Incorreta. A retenção de compostos nitrogenados na fase tardia é secundária à síndrome hepatorrenal e necrose tubular, e não o gatilho inicial primário da droga."
+      }
+    },
+    {
+      id: 45,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Anti-hipertensivos & Tosse Seca por Bradicinina",
+      statement: "Um paciente em tratamento para hipertensão arterial sistêmica relata surgimento persistente de tosse seca e irritativa, sem febre ou congestão pulmonar. Essa reação adversa clássica é característica dos fármacos pertencentes à classe dos:",
+      options: {
+        A: "Bloqueadores dos canais de cálcio di-hidropiridínicos (anlodipino).",
+        B: "Bloqueadores dos receptores AT1 da angiotensina II (losartana).",
+        C: "Inibidores da enzima conversora de angiotensina - IECA (captopril, enalapril).",
+        D: "Diuréticos de alça (furosemida).",
+        E: "Agonistas alfa-2 adrenérgicos de ação central (clonidina)."
+      },
+      correct: "C",
+      correctExplanation: "A enzima conversora de angiotensina (ECA) é idêntica à cininase II, enzima responsável pela degradação da bradicinina e substância P nas vias respiratórias. O bloqueio da ECA pelos IECAs acarreta acúmulo local dessas cininas nos pulmões, provocando estimulação de fibras sensoriais e tosse seca crônica em 5% a 20% dos pacientes.",
+      distractorAnalysis: {
+        A: "Incorreta. Bloqueadores dos canais de cálcio causam edema de membros inferiores (tornozelos) por vasodilatação arteriolar pré-capilar e rubor facial.",
+        B: "Incorreta. Os BRA (como a losartana) antagonizam seletivamente o receptor AT1 sem inibir a ECA; logo, não acumulam bradicinina e constituem a alternativa padrão para pacientes com tosse por IECA.",
+        D: "Incorreta. Diuréticos de alça geram perda de volume, hipocalemia e hipomagnesemia, sem relação direta com tosse bradicinina-dependente.",
+        E: "Incorreta. A clonidina tem como efeitos adversos típicos boca seca (xerostomia), sonolência e sedação central."
+      }
+    },
+    {
+      id: 46,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Resistência Bacteriana & Inibidores de Beta-lactamase",
+      statement: "A associação do ácido clavulânico, sulbactam ou tazobactam a antibióticos penicilânicos (como amoxicilina ou ampicilina) tem como principal objetivo farmacológico:",
+      options: {
+        A: "Aumentar a absorção enteral da ampicilina por indução de carreadores de aminoácidos.",
+        B: "Inibir as enzimas beta-lactamases bacterianas, protegendo o anel beta-lactâmico e restaurando o espectro antimicrobiano contra bactérias resistentes.",
+        C: "Diminuir a eliminação renal do antibiótico competindo pela secreção tubular ativa de ácidos orgânicos.",
+        D: "Atuar sinergicamente na membrana plasmática provocando poros osmóticos imediatos.",
+        E: "Neutralizar os efeitos adversos gastrointestinais e diarreia osmótica dos antibacterianos."
+      },
+      correct: "B",
+      correctExplanation: "Muitas bactérias tornam-se resistentes produzindo beta-lactamases que clivam o anel beta-lactâmico de penicilinas, inativando o fármaco. O clavulanato e o sulbactam são 'inibidores suicidas' de beta-lactamases: ligam-se covalentemente ao sítio ativo da enzima bacteriana, impedindo a destruição da amoxicilina/ampicilina e restaurando sua eficácia clínica.",
+      distractorAnalysis: {
+        A: "Incorreta. Não atuam estimulando absorção na mucosa intestinal.",
+        C: "Incorreta. A competição pela secreção tubular renal de penicilinas é uma função farmacológica descrita para a probenecida, e não para os inibidores de beta-lactamase.",
+        D: "Incorreta. Esses inibidores não formam canais na membrana fosfolipídica.",
+        E: "Incorreta. Na verdade, a adição de ácido clavulânico com frequência aumenta a motilidade intestinal e o risco de diarreia em relação à amoxicilina isolada."
+      }
+    },
+    {
+      id: 47,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Antídotos & Hemorragia por Varfarina",
+      statement: "Em situação de emergência clínica na qual um paciente em uso crônico de varfarina dá entrada com sangramento grave por sobredosagem (INR excessivamente elevado), o antídoto farmacológico específico de reposição fisiológica para reverter a inibição da síntese de fatores de coagulação é:",
+      options: {
+        A: "Sulfato de protamina venoso.",
+        B: "Complexo heparina-antitrombina pura.",
+        C: "Vitamina K1 (fitomenadiona).",
+        D: "Ácido acetilsalicílico em dose antiagregante.",
+        E: "N-acetilcisteína parenteral."
+      },
+      correct: "C",
+      correctExplanation: "A varfarina inibe a enzima epóxido redutase da vitamina K, bloqueando a regeneração da forma reduzida de vitamina K (hidroquinona), impedindo a carboxilação dos fatores II, VII, IX, X e proteínas C e S. A administração de Vitamina K1 (fitomenadiona) suplementa o cofator ativo por vias alternativas, restabelecendo a síntese fisiológica de fatores hepáticos.",
+      distractorAnalysis: {
+        A: "Incorreta. O sulfato de protamina é o antídoto específico para neutralização de heparina não fracionada (formando um complexo salino inativo com a heparina ácida).",
+        B: "Incorreta. Administrar heparina pioraria catastroficamente a diátese hemorrágica.",
+        D: "Incorreta. O ácido acetilsalicílico agravaria o sangramento por bloquear a função plaquetária.",
+        E: "Incorreta. A N-acetilcisteína é o antídoto específico para intoxicações por paracetamol (acetaminofeno)."
+      }
+    },
+    {
+      id: 48,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Cálculo de Meia-Vida & Cinética de Eliminação",
+      statement: "Um fármaco administrado em doses repetidas com cinética linear de primeira ordem apresenta tempo de meia-vida (t1/2) de 3 horas. Para que o organismo atinja o estado de equilíbrio plasmático (Css, correspondente a cerca de 4 a 5 meias-vidas de administração regular), estima-se um tempo de:",
+      options: {
+        A: "3 a 6 horas após iniciar o esquema posológico.",
+        B: "6 a 9 horas após iniciar o esquema posológico.",
+        C: "9 a 15 horas após iniciar o esquema posológico.",
+        D: "36 a 48 horas após iniciar o esquema posológico.",
+        E: "Mais de 72 horas obrigatoriamente."
+      },
+      correct: "C",
+      correctExplanation: "Em farmacocinética de primeira ordem, são necessárias de 4 a 5 meias-vidas biológicas (t1/2) para acumular mais de 93,75% a 96,88% da concentração de equilíbrio estável. Multiplicando-se: 3 a 5 meias-vidas x 3 h totalizam entre 9 e 15 horas de esquema posológico regular.",
+      distractorAnalysis: {
+        A: "Incorreta. De 3 a 6 horas correspondem a apenas 1 a 2 meias-vidas (onde apenas 50% a 75% do equilíbrio foi alcançado).",
+        B: "Incorreta. De 6 a 9 horas correspondem a 2 a 3 meias-vidas (ainda em fase de acúmulo substancial de fármaco).",
+        D: "Incorreta. 36 a 48 horas representariam de 12 a 16 meias-vidas, tempo muito superior ao estritamente necessário para alcançar o platô plasmático.",
+        E: "Incorreta. Não há justificativa cinética para retardar o steady-state para 72 horas em um fármaco de t1/2 de apenas 3 horas."
+      }
+    },
+    {
+      id: 49,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Toxicologia Forense & Antagonismo Químico",
+      statement: "No envenenamento por metais pesados (como chumbo ou cádmio), utiliza-se clinicamente um agente quelante (como o EDTA ou dimercaprol), que se liga com altíssima afinidade aos íons metálicos formando complexos estáveis e atóxicos excretáveis na urina. Esse mecanismo de antagonismo é definido como:",
+      options: {
+        A: "Antagonismo químico.",
+        B: "Antagonismo farmacológico competitivo.",
+        C: "Antagonismo fisiológico ou funcional.",
+        D: "Antagonismo alostérico irreversível.",
+        E: "Antagonismo farmacocinético indutor."
+      },
+      correct: "A",
+      correctExplanation: "O antagonismo químico ocorre quando duas substâncias reagem quimicamente entre si em solução, neutralizando a molécula tóxica e gerando um produto inerte, sem que haja necessidade de ligação a receptores celulares biológicos clássicos.",
+      distractorAnalysis: {
+        B: "Incorreta. O antagonismo competitivo envolve disputa pelo sítio de ligação de um receptor de membrana.",
+        C: "Incorreta. O antagonismo fisiológico ocorre quando dois agonistas agem em receptores distintos produzindo efeitos fisiológicos opostos (ex: histamina e adrenalina no brônquio).",
+        D: "Incorreta. Não envolve sítio alostérico macromolecular de receptor.",
+        E: "Incorreta. Não decorre de indução enzimática do metabolismo."
+      }
+    },
+    {
+      id: 50,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Antieméticos & Antagonistas de Neurocinina-1 (NK1)",
+      statement: "Na prevenção da êmese tardia grave provocada por quimioterápicos altamente emetogênicos (como a cisplatina), a classe dos antagonistas dos receptores de neurocinina-1 (NK1) da substância P é composta por:",
+      options: {
+        A: "Aprepitanto, fosaprepitanto, netupitanto e rolapitant.",
+        B: "Ondansetrona, granisetrona, dolasetrona e palonosetrona.",
+        C: "Metoclopramida, bromoprida, domperidona e haloperidol.",
+        D: "Escopolamina, atropina, prometazina e difenidramina.",
+        E: "Omeprazol, pantoprazol, esomeprazol e rabeprazol."
+      },
+      correct: "A",
+      correctExplanation: "O aprepitanto e seus derivados (fosaprepitanto pró-fármaco, netupitanto e rolapitant) bloqueiam seletivamente os receptores NK1 no centro do vômito e na ZQG do tronco cerebral, inibindo as ações da substância P e prevenindo a êmese aguda e tardia de esquemas quimioterápicos oncológicos.",
+      distractorAnalysis: {
+        B: "Incorreta. As 'setronas' são antagonistas dos receptores serotonérgicos 5-HT3.",
+        C: "Incorreta. Metoclopramida e domperidona são antagonistas dopaminérgicos D2.",
+        D: "Incorreta. Escopolamina é antimuscarínico e prometazina é anti-histamínico H1.",
+        E: "Incorreta. Os 'prazóis' são inibidores da bomba de prótons gástrica (H+/K+-ATPase)."
+      }
+    },
+    {
+      id: 51,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Quinolonas & Inibição da DNA-Girase",
+      statement: "Qual dos seguintes antimicrobianos atua inibindo seletivamente a DNA-girase (topoisomerase II) e topoisomerase IV bacterianas, impedindo o relaxamento e a replicação do DNA em infecções urinárias e entéricas?",
+      options: {
+        A: "Norfloxacino.",
+        B: "Penicilina G cristalina.",
+        C: "Amicacina parenteral.",
+        D: "Sulfadiazina sódica.",
+        E: "Eritromicina oral."
+      },
+      correct: "A",
+      correctExplanation: "O norfloxacino é uma fluorquinolona bactericida que se liga às enzimas DNA-girase e topoisomerase IV bacterianas, induzindo quebra e fragmentação irreversível do cromossomo bacteriano, sendo amplamente excretado na urina para tratamento de infecções do trato urinário.",
+      distractorAnalysis: {
+        B: "Incorreta. A penicilina inibe a transpeptidação na parede bacteriana de peptidoglicano.",
+        C: "Incorreta. A amicacina é um aminoglicosídeo que inibe a subunidade 30S do ribossomo.",
+        D: "Incorreta. As sulfonamidas inibem a enzima di-hidropteroato sintase na síntese de folato.",
+        E: "Incorreta. A eritromicina liga-se à subunidade 50S ribossômica."
+      }
+    },
+    {
+      id: 52,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Aminoglicosídeos & Toxicidade Órgão-Específica",
+      statement: "A gentamicina é um antibiótico aminoglicosídeo bactericida que se liga à subunidade 30S do ribossomo bacteriano. Seu emprego clínico exige monitorização cautelosa em razão de quais toxicidades clássicas?",
+      options: {
+        A: "Ototoxicidade coclear/vestibular e nefrotoxicidade tubular aguda.",
+        B: "Hepatite autoimune e colite pseudomembranosa exclusivamente.",
+        C: "Aplasia pura de série vermelha e retinopatia pigmentar.",
+        D: "Acidose lática com hipoglicemia e pancreatite aguda.",
+        E: "Hipertensão intracraniana idiopática e hipotireoidismo."
+      },
+      correct: "A",
+      correctExplanation: "Aminoglicosídeos acumulam-se nas células ciliadas da orelha interna (provocando lesão vestibular com tontura e coclear com surdez irreversível) e nas células tubulares proximais renais (causando necrose tubular e elevação de escórias nitrogenadas).",
+      distractorAnalysis: {
+        B: "Incorreta. Não são lesões primariamente hepatocelulares imunes.",
+        C: "Incorreta. A toxicidade medular é clássica do cloranfenicol (anemia aplástica).",
+        D: "Incorreta. Acidose lática com hipoglicemia não é o efeito órgão-específico característico dos aminoglicosídeos.",
+        E: "Incorreta. Não causam retinopatia ou desordens tireoidianas típicas."
+      }
+    },
+    {
+      id: 53,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Toxicologia dos Pesticidas Organofosforados",
+      statement: "A contaminação acidental por compostos organofosforados provoca intoxicação colinérgica grave e potencialmente fatal. O mecanismo toxicológico dessas substâncias decorre da:",
+      options: {
+        A: "Inibição irreversível da enzima acetilcolinesterase por fosforilação, provocando acúmulo maciço de acetilcolina nas sinapses e junções neuromusculares.",
+        B: "Inibição seletiva da síntese de noradrenalina nos gânglios paravertebrais.",
+        C: "Destruição autoimune de todos os receptores muscarínicos periféricos.",
+        D: "Estimulação dos canais de potássio com relaxamento flácido visceral.",
+        E: "Neutralização das catecolaminas circulantes no leito arterial."
+      },
+      correct: "A",
+      correctExplanation: "Organofosforados ligam-se covalentemente ao sítio estérico da acetilcolinesterase, fosforilando a enzima. Sem a degradação da acetilcolina, ocorre hiperestimulação contínua dos receptores muscarínicos (miose, broncorreia, bradicardia, salivação) e nicotínicos (fasciculações seguidas de paralisia muscular respiratória).",
+      distractorAnalysis: {
+        B: "Incorreta. O alvo primordial é a enzima degradadora de acetilcolina, sem bloqueio de noradrenalina.",
+        C: "Incorreta. Não há destruição imune; há sobrecarga contínua de neurotransmissor nos receptores existentes.",
+        D: "Incorreta. Provoca broncoespasmo severo e contração muscular espástica antes da despolarização prolongada.",
+        E: "Incorreta. A toxicidade é eminentemente colinérgica e não adrenérgica."
+      }
+    },
+    {
+      id: 54,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Analgésicos Pirazolônicos & Dipirona",
+      statement: "Assinale a alternativa que corresponde ao analgésico e antipirético derivado pirazolônico, amplamente utilizado no Brasil, cujo mecanismo analgésico envolve ações no sistema nervoso central e bloqueio de nociceptores periféricos de modo independente da via da COX clássica:",
+      options: {
+        A: "Dipirona (metamizol).",
+        B: "Cetorolaco de trometamol.",
+        C: "Ácido mefenâmico.",
+        D: "Nimesulida.",
+        E: "Piroxicam."
+      },
+      correct: "A",
+      correctExplanation: "A dipirona (metamizol) é um analgésico pirazolônico com potente ação antipirética e espasmolítica. Ela atua centralmente e perifericamente através da ativação da via óxido nítrico-GMPc e canais de potássio, além de inibir a sensibilização de nociceptores e COX-3 atípica do SNC, sem provocar as ulcerações gástricas severas dos AINEs ácidos comuns.",
+      distractorAnalysis: {
+        B: "Incorreta. O cetorolaco é um AINE tradicional potente derivado do ácido heteroarilacético, forte inibidor de COX-1.",
+        C: "Incorreta. O ácido mefenâmico é um derivado fenamato AINE clássico inibidor da COX.",
+        D: "Incorreta. A nimesulida é uma sulfonanilida inibidora preferencial de COX-2.",
+        E: "Incorreta. O piroxicam é um oxicam inibidor inespecífico da ciclo-oxigenase."
+      }
+    },
+    {
+      id: 55,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Conceito Farmacodinâmico de Taquifilaxia",
+      statement: "Em farmacologia, a perda progressiva da intensidade de resposta a um fármaco após administração repetida pode ocorrer por diferentes processos. A dessensibilização rápida, aguda e de aparecimento quase imediato após poucas doses é conceituada como:",
+      options: {
+        A: "Taquifilaxia.",
+        B: "Idiopatia alérgica tardia.",
+        C: "Tolerância crônica farmacocinética.",
+        D: "Hipersensibilidade anafilática tipo I.",
+        E: "Potenciação pós-tetânica sustentada."
+      },
+      correct: "A",
+      correctExplanation: "A taquifilaxia (tolerância aguda) é a redução rápida da resposta a um fármaco que se desenvolve após poucas doses consecutivas em curto intervalo de tempo (como na administração repetida de efedrina, nitratos ou descongestionantes tópicos por esgotamento de estoques ou fosforilação de receptores).",
+      distractorAnalysis: {
+        B: "Incorreta. Idiopatia/reação idiossincrática é resposta geneticamente determinada aberrante.",
+        C: "Incorreta. A tolerância crônica requer dias ou semanas de exposição constante com indução metabólica ou regulação negativa (down-regulation).",
+        D: "Incorreta. Hipersensibilidade alérgica é mediada por IgE contra antígenos.",
+        E: "Incorreta. Potenciação é o inverso da tolerância (aumento da resposta)."
+      }
+    },
+    {
+      id: 56,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Reações Adversas na Infusão de Glicopeptídeos",
+      statement: "Durante a infusão intravenosa acelerada de um antimicrobiano glicopeptídeo, o paciente desenvolveu prurido intenso, eritema máculo-papular difuso no pescoço, face e tronco superior ('síndrome do homem vermelho'). Essa reação adversa clássica está associada à infusão rápida de:",
+      options: {
+        A: "Vancomicina.",
+        B: "Gentamicina.",
+        C: "Clindamicina.",
+        D: "Meropenem.",
+        E: "Cefepime."
+      },
+      correct: "A",
+      correctExplanation: "A 'síndrome do homem vermelho' (ou síndrome do pescoço vermelho) decorre da degranulação direta e não imunológica de mastócitos com liberação de histamina desencadeada pela infusão rápida de vancomicina intravenosa. Previne-se administrando a infusão diluída em tempo superior a 60 minutos.",
+      distractorAnalysis: {
+        B: "Incorreta. A gentamicina é aminoglicosídeo e não deflagra essa síndrome histaminérgica típica de infusão.",
+        C: "Incorreta. A clindamicina é lincosamida associada a diarreia por Clostridioides difficile.",
+        D: "Incorreta. O meropenem é carbapenêmico sem essa reação adversa clássica.",
+        E: "Incorreta. O cefepime é uma cefalosporina de 4ª geração com perfil diferente."
+      }
+    },
+    {
+      id: 57,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Placa Motora & Miastenia Gravis",
+      statement: "A Miastenia Gravis é uma afecção autoimune caracterizada pela destruição de receptores nicotínicos musculares na membrana pós-sináptica da placa motora. Os fármacos anticolinesterásicos (como a piridostigmina) são indicados nessa patologia porque:",
+      options: {
+        A: "Inibem reversivelmente a acetilcolinesterase, aumentando a concentração e a permanência de acetilcolina na fenda sináptica para estimular os receptores remanescentes.",
+        B: "Destroem a síntese de anticorpos humorais na medula óssea diretamente.",
+        C: "Bloqueiam os canais de sódio voltagem-dependentes prevenindo espasmos tônicos.",
+        D: "Atuam como agonistas adrenérgicos beta-2 pulmonares melhorando o débito cardíaco.",
+        E: "Aceleram a hidrólise de acetilcolina para evitar fadiga do sarcolema."
+      },
+      correct: "A",
+      correctExplanation: "Ao inibir a acetilcolinesterase na fenda da junção neuromuscular, a piridostigmina impede a degradação da acetilcolina endógena, permitindo que ela se acumule e ative repetidamente os poucos receptores nicotínicos funcionais restantes, restabelecendo a força contrátil muscular.",
+      distractorAnalysis: {
+        B: "Incorreta. Anticolinesterásicos não são imunossupressores primários.",
+        C: "Incorreta. Eles não bloqueiam canais de sódio voltagem-dependentes (mecanismo de anestésicos locais).",
+        D: "Incorreta. Não possuem atividade agonista beta-2 adrenérgica.",
+        E: "Incorreta. O fármaco REDUZ a hidrólise enzimática, potencializando a transmissão sináptica."
+      }
+    },
+    {
+      id: 58,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Sialagogos & Pilocarpina na Xerostomia",
+      statement: "Pacientes submetidos a radioterapia de cabeça e pescoço frequentemente desenvolvem xerostomia grave (boca seca por hipofunção salivar). A prescrição de pilocarpina atua estimulando as glândulas salivares através de qual mecanismo farmacodinâmico?",
+      options: {
+        A: "Agonismo seletivo em receptores muscarínicos (M3) do parassimpático glandular.",
+        B: "Antagonismo irreversível de receptores nicotínicos ganglionares.",
+        C: "Estimulação simpática via receptores adrenérgicos beta-1 exclusivamente.",
+        D: "Inibição da síntese de amilase salivar por bloqueio ribossômico.",
+        E: "Bloqueio de receptores histaminérgicos H2 endoteliais."
+      },
+      correct: "A",
+      correctExplanation: "A pilocarpina é um alcaloide parassimpatomimético que atua como agonista direto de receptores muscarínicos (especialmente M3). Nas glândulas salivares e lacrimais, ativa a via Gq-fosfolipase C-cálcio intracelular, provocando secreção salivar abundante e aliviando a xerostomia.",
+      distractorAnalysis: {
+        B: "Incorreta. Não é antagonista nicotínico (isso bloquearia gânglios e paralisaria músculos).",
+        C: "Incorreta. A estimulação secretora aquosa abundante é tipicamente colinérgica muscarínica.",
+        D: "Incorreta. Ela estimula a secreção hídrica glandular e enzimática.",
+        E: "Incorreta. Não tem como alvo os receptores H2 de histamina gástricos."
+      }
+    },
+    {
+      id: 59,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Antibióticos Beta-Lactâmicos & Parede Celular",
+      statement: "Os antibióticos da classe dos beta-lactâmicos (como penicilinas e cefalosporinas) exercem atividade bactericida através do seguinte mecanismo molecular:",
+      options: {
+        A: "Inibição das enzimas transpeptidases (Proteínas Ligantes de Penicilina - PBPs), bloqueando as ligações cruzadas de peptidoglicano e fragilizando a parede celular bacteriana.",
+        B: "Ligação direta à subunidade 30S do ribossomo com leitura errônea de códons do RNAt.",
+        C: "Inibição da enzima di-hidrofolato redutase bacteriana privando a síntese de timidina.",
+        D: "Quelação e sequestro de íons ferro citoplasmáticos nas mitocôndrias bacterianas.",
+        E: "Abertura permanente de canais de cloreto na membrana citoplasmática bacteriana."
+      },
+      correct: "A",
+      correctExplanation: "O anel beta-lactâmico mimetiza a conformação do dipeptídeo D-Alanil-D-Alanina do peptidoglicano bacteriano. O antibiótico acila e inativa covalentemente as transpeptidases (PBPs), impedindo o entrelaçamento da malha de peptidoglicano; sob pressão osmótica interna elevada, a bactéria sofre lise celular.",
+      distractorAnalysis: {
+        B: "Incorreta. A ligação à subunidade 30S é o mecanismo dos aminoglicosídeos e tetraciclinas.",
+        C: "Incorreta. O bloqueio da di-hidrofolato redutase é o mecanismo do trimetoprima.",
+        D: "Incorreta. Não operam como quelantes de ferro.",
+        E: "Incorreta. Bactérias não possuem canais de cloreto regulados por beta-lactâmicos."
+      }
+    },
+    {
+      id: 60,
+      level: "Nível III: Eliminação, Toxicologia e Casos Clínicos",
+      topic: "Antidiabéticos Orais & Metformina",
+      statement: "No tratamento de primeira linha do Diabetes Mellitus tipo 2, a metformina destaca-se por não causar hipoglicemia em monoterapia e não estimular ganho ponderal. A qual classe farmacológica pertence a metformina e qual seu principal sítio de atuação primária?",
+      options: {
+        A: "Biguanidas; atua ativando a proteína quinase ativada por AMP (AMPK) no fígado, reduzindo a gliconeogênese hepática e melhorando a sensibilidade periférica à insulina.",
+        B: "Sulfonilureias; atua fechando canais de potássio dependentes de ATP no pâncreas para forçar a liberação contínua de insulina.",
+        C: "Glitazonas; atua como agonista do receptor nuclear PPAR-gama no tecido adiposo visceral exclusivamente.",
+        D: "Inibidores de SGLT2; atua promovendo glicosúria forçada no túbulo contorcido proximal renal.",
+        E: "Inibidores de DPP-4; atua inibindo a degradação de incretinas circulantes no plasma."
+      },
+      correct: "A",
+      correctExplanation: "A metformina é uma biguanida. Seu mecanismo fundamental envolve a ativação da AMPK mitocondrial nos hepatócitos, resultando em supressão expressiva da gliconeogênese hepática e da glicogenólise, com redução concomitante da resistência periférica à insulina no músculo esquelético.",
+      distractorAnalysis: {
+        B: "Incorreta. A metformina não é sulfonilureia e não atua fechando canais de potássio das ilhotas pancreáticas.",
+        C: "Incorreta. Agonistas de PPAR-gama são as tiazolidinedionas (como pioglitazona).",
+        D: "Incorreta. Inibidores de SGLT2 compreendem as gliflozinas (dapagliflozina, empagliflozina).",
+        E: "Incorreta. Inibidores da dipeptidil peptidase-4 são as gliptinas (sitagliptina, vildagliptina)."
+      }
+    }
+  ];
+
+  /* ==========================================================================
+     2. MÓDULO DE ÁUDIO SINTETIZADO (WEB AUDIO API PURA)
+     ========================================================================== */
+  class BiomedicalAudioEngine {
+    constructor() {
+      this.ctx = null;
+      this.enabled = true;
+    }
+
+    init() {
+      if (!this.ctx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          this.ctx = new AudioContextClass();
+        }
+      }
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+    }
+
+    playSuccessChime() {
+      if (!this.enabled) return;
+      this.init();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc1.type = 'sine';
+      osc2.type = 'triangle';
+
+      // Arpeggio harmônico cristalino de acoplamento molecular (Mi - Sol# - Si - Mi agudo)
+      osc1.frequency.setValueAtTime(659.25, now);
+      osc1.frequency.exponentialRampToValueAtTime(1318.5, now + 0.25);
+
+      osc2.frequency.setValueAtTime(830.61, now + 0.08);
+      osc2.frequency.exponentialRampToValueAtTime(1661.22, now + 0.35);
+
+      gain.gain.setValueAtTime(0.01, now);
+      gain.gain.linearRampToValueAtTime(0.18, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now + 0.08);
+      osc1.stop(now + 0.45);
+      osc2.stop(now + 0.45);
+    }
+
+    playFailureDegrade() {
+      if (!this.enabled) return;
+      this.init();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const noiseGain = this.ctx.createGain();
+
+      // Som grave descendente de hidrólise ácida / lise de ligante
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.4);
+
+      noiseGain.gain.setValueAtTime(0.2, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+      osc.connect(noiseGain);
+      noiseGain.connect(this.ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.45);
+    }
+
+    playTransitionBeep() {
+      if (!this.enabled) return;
+      this.init();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    }
+  }
+
+  const audioSystem = new BiomedicalAudioEngine();
+
+  /* ==========================================================================
+     3. VASCULAR 3D SIMULATION CANVAS (HEMÁCIAS E LÚMEN VASCULAR PURO)
+     ========================================================================== */
+  const canvas = document.getElementById('bloodstreamCanvas');
+  const ctx = canvas.getContext('2d');
+  let animationFrameId;
+  let erythrocytes = [];
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  window.addEventListener('resize', () => {
+    resizeCanvas();
+    initErythrocytes();
+  });
+
+  class Erythrocyte {
+    constructor() {
+      this.reset(true);
+    }
+
+    reset(initial = false) {
+      this.x = initial ? Math.random() * canvas.width : -80;
+      this.y = Math.random() * canvas.height;
+      this.z = Math.random() * 0.8 + 0.2; // Escala de profundidade 3D
+      this.vx = (Math.random() * 1.5 + 0.8) * this.z * 1.4;
+      this.vy = (Math.sin(Math.random() * Math.PI * 2) * 0.3) * this.z;
+      this.radiusX = (24 + Math.random() * 14) * this.z;
+      this.radiusY = (14 + Math.random() * 8) * this.z;
+      this.angle = Math.random() * Math.PI * 2;
+      this.vAngle = (Math.random() - 0.5) * 0.02;
+      this.alpha = 0.25 + this.z * 0.45;
+    }
+
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.angle += this.vAngle;
+
+      if (this.x > canvas.width + 100) {
+        this.reset(false);
+      }
+    }
+
+    draw() {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.angle);
+
+      // Sombra volumétrica do eritrócito
+      ctx.beginPath();
+      ctx.ellipse(2, 4, this.radiusX, this.radiusY, 0, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(10, 0, 4, ${this.alpha * 0.5})`;
+      ctx.fill();
+
+      // Disco bicôncavo de hemácia com iluminação especular
+      const grad = ctx.createRadialGradient(-this.radiusX * 0.2, -this.radiusY * 0.2, 2, 0, 0, this.radiusX);
+      grad.addColorStop(0, `rgba(235, 60, 75, ${this.alpha})`);
+      grad.addColorStop(0.5, `rgba(180, 20, 35, ${this.alpha})`);
+      grad.addColorStop(0.85, `rgba(110, 8, 18, ${this.alpha})`);
+      grad.addColorStop(1, `rgba(60, 4, 10, ${this.alpha * 0.9})`);
+
+      ctx.beginPath();
+      ctx.ellipse(0, 0, this.radiusX, this.radiusY, 0, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Depressão central bicôncava característica da hemácia
+      ctx.beginPath();
+      ctx.ellipse(0, 0, this.radiusX * 0.45, this.radiusY * 0.45, 0, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(80, 5, 12, ${this.alpha * 0.7})`;
+      ctx.fill();
+
+      ctx.restore();
+    }
+  }
+
+  function initErythrocytes() {
+    erythrocytes = [];
+    const count = Math.min(38, Math.floor(window.innerWidth / 35));
+    for (let i = 0; i < count; i++) {
+      erythrocytes.push(new Erythrocyte());
+    }
+  }
+
+  let pulseFactor = 0;
+  function renderBloodstream(time) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Pulso arterial sutil de fundo
+    pulseFactor = Math.sin(time * 0.002) * 0.04;
+
+    // Gradiente do lúmen endotelial
+    const lumenGrad = ctx.createRadialGradient(
+      canvas.width * 0.5, canvas.height * 0.5, canvas.width * 0.1,
+      canvas.width * 0.5, canvas.height * 0.5, canvas.width * 0.85
+    );
+    lumenGrad.addColorStop(0, 'rgba(28, 6, 12, 0.45)');
+    lumenGrad.addColorStop(0.7, 'rgba(15, 4, 8, 0.75)');
+    lumenGrad.addColorStop(1, 'rgba(6, 8, 14, 0.95)');
+    ctx.fillStyle = lumenGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Renderizar hemácias em suspensão
+    for (let i = 0; i < erythrocytes.length; i++) {
+      erythrocytes[i].update();
+      erythrocytes[i].draw();
+    }
+
+    animationFrameId = requestAnimationFrame(renderBloodstream);
+  }
+
+  /* ==========================================================================
+     4. MÁQUINA DE ESTADOS & CONTROLADOR DE PROGRESSÃO DO JOGO
+     ========================================================================== */
+  const gameState = {
+    currentIndex: 0,
+    health: 10,
+    maxHealth: 10,
+    score: 0,
+    consecutiveHits: 0,
+    totalAnswered: 0,
+    totalCorrect: 0,
+    mistakeTopics: new Set(),
+    isQuestionLocked: false
+  };
+
+  // Elementos do DOM
+  const healthContainer = document.getElementById('healthCapsulesContainer');
+  const healthCounterText = document.getElementById('healthCounterText');
+  const phaseTelemetry = document.getElementById('phaseTelemetry');
+  const bioavailabilityVal = document.getElementById('bioavailabilityVal');
+  const admeProgressBar = document.getElementById('admeProgressBar');
+  const admeA = document.getElementById('admeA');
+  const admeD = document.getElementById('admeD');
+  const admeM = document.getElementById('admeM');
+  const admeE = document.getElementById('admeE');
+
+  const qLevelBadge = document.getElementById('qLevelBadge');
+  const qTopicBadge = document.getElementById('qTopicBadge');
+  const qIndexBadge = document.getElementById('qIndexBadge');
+  const qStatement = document.getElementById('qStatement');
+  const receptorsContainer = document.getElementById('receptorsContainer');
+  const capsuleWrapper = document.getElementById('capsuleWrapper');
+  const capsuleStatusBadge = document.getElementById('capsuleStatusBadge');
+
+  // Modal de Feedback
+  const feedbackModal = document.getElementById('feedbackModal');
+  const feedbackHeader = document.getElementById('feedbackHeader');
+  const feedbackStatusIcon = document.getElementById('feedbackStatusIcon');
+  const feedbackStatusTitle = document.getElementById('feedbackStatusTitle');
+  const feedbackChoiceSubtitle = document.getElementById('feedbackChoiceSubtitle');
+  const feedbackRewardBadge = document.getElementById('feedbackRewardBadge');
+  const feedbackCorrectAnswerText = document.getElementById('feedbackCorrectAnswerText');
+  const feedbackCorrectExplanation = document.getElementById('feedbackCorrectExplanation');
+  const feedbackDistractorsList = document.getElementById('feedbackDistractorsList');
+  const feedbackActionBtn = document.getElementById('feedbackActionBtn');
+
+  // Telas Finais
+  const gameOverModal = document.getElementById('gameOverModal');
+  const victoryModal = document.getElementById('victoryModal');
+  const restartBtnLoss = document.getElementById('restartBtnLoss');
+  const restartBtnWin = document.getElementById('restartBtnWin');
+  const soundToggleBtn = document.getElementById('soundToggleBtn');
+  const soundIconOn = document.getElementById('soundIconOn');
+  const soundIconOff = document.getElementById('soundIconOff');
+
+  // Inicializar indicador de 10 cápsulas de integridade
+  function renderHealthCapsules() {
+    healthContainer.innerHTML = '';
+    for (let i = 0; i < gameState.maxHealth; i++) {
+      const cap = document.createElement('div');
+      cap.className = `health-capsule ${i >= gameState.health ? 'dissolved' : ''}`;
+      cap.title = `Carga Bioativa ${i + 1}/${gameState.maxHealth}`;
+      healthContainer.appendChild(cap);
+    }
+    healthCounterText.textContent = `${gameState.health}/${gameState.maxHealth}`;
+    if (gameState.health <= 3) {
+      healthCounterText.className = 'text-xs sm:text-sm font-black font-mono text-red-400 animate-pulse';
+    } else {
+      healthCounterText.className = 'text-xs sm:text-sm font-black font-mono text-emerald-400';
+    }
+  }
+
+  // Atualizar trilha ADME de acordo com o progresso das 60 questões
+  function updateADMETrail() {
+    const total = PHARMA_DATA.length;
+    const progressPercent = Math.min(100, Math.round(((gameState.currentIndex + 1) / total) * 100));
+    admeProgressBar.style.width = `${progressPercent}%`;
+
+    // Etapas ADME distribuídas proporcionalmente entre as 60 questões
+    admeA.className = gameState.currentIndex < 15 ? 'text-cyan-400 font-bold' : 'text-slate-500';
+    admeD.className = (gameState.currentIndex >= 15 && gameState.currentIndex < 30) ? 'text-amber-400 font-bold' : 'text-slate-500';
+    admeM.className = (gameState.currentIndex >= 30 && gameState.currentIndex < 45) ? 'text-rose-400 font-bold' : 'text-slate-500';
+    admeE.className = gameState.currentIndex >= 45 ? 'text-emerald-400 font-bold' : 'text-slate-500';
+
+    phaseTelemetry.textContent = `Fase Farmacológica: Questão ${gameState.currentIndex + 1} / ${total}`;
+    
+    // Cálculo da taxa de eficácia bioativa
+    const bioRate = gameState.totalAnswered > 0 
+      ? Math.round((gameState.totalCorrect / gameState.totalAnswered) * 100) 
+      : 100;
+    bioavailabilityVal.textContent = `${bioRate}% Bioativo (${gameState.score} pts)`;
+  }
+
+  // Carregar questão na interface
+  function loadQuestion(index) {
+    if (index >= PHARMA_DATA.length) {
+      triggerVictoryScreen();
+      return;
+    }
+
+    gameState.isQuestionLocked = false;
+    const q = PHARMA_DATA[index];
+
+    // Metadados
+    qLevelBadge.textContent = q.level;
+    qTopicBadge.textContent = q.topic;
+    qIndexBadge.textContent = `ID #${q.id.toString().padStart(2, '0')}`;
+    qStatement.textContent = q.statement;
+
+    // Reset de animação da cápsula
+    capsuleWrapper.style.transform = 'translateY(0) scale(1)';
+    capsuleStatusBadge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span> Fármaco em Circulação Ativa`;
+    capsuleStatusBadge.className = 'text-[11px] font-mono font-semibold tracking-wider text-cyan-300 uppercase flex items-center gap-1.5 justify-center';
+
+    // Gerar 5 Receptores de Resposta (A, B, C, D, E)
+    receptorsContainer.innerHTML = '';
+    const letters = ['A', 'B', 'C', 'D', 'E'];
+
+    letters.forEach(letter => {
+      const optionText = q.options[letter];
+      const podBtn = document.createElement('button');
+      podBtn.className = 'receptor-pod w-full p-3 sm:p-3.5 rounded-xl text-left flex items-start gap-3 group focus:outline-none';
+      podBtn.dataset.letter = letter;
+
+      podBtn.innerHTML = `
+        <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-slate-900/90 border border-amber-400/40 text-amber-300 font-mono font-black text-sm flex items-center justify-center group-hover:border-cyan-400 group-hover:text-cyan-300 transition-colors shadow-sm">
+          ${letter}
+        </div>
+        <div class="flex-1 text-xs sm:text-sm text-slate-200 group-hover:text-white leading-snug">
+          ${optionText}
+        </div>
+      `;
+
+      podBtn.addEventListener('click', () => handleReceptorSelection(letter, podBtn));
+      receptorsContainer.appendChild(podBtn);
+    });
+
+    updateADMETrail();
+  }
+
+  // Mecânica ao selecionar uma resposta
+  function handleReceptorSelection(selectedLetter, clickedElement) {
+    if (gameState.isQuestionLocked) return;
+    gameState.isQuestionLocked = true;
+
+    // Congelar outros botões
+    const allPods = receptorsContainer.querySelectorAll('.receptor-pod');
+    allPods.forEach(pod => {
+      pod.disabled = true;
+      pod.classList.add('opacity-70');
+    });
+    clickedElement.classList.remove('opacity-70');
+
+    const currentQ = PHARMA_DATA[gameState.currentIndex];
+    const isCorrect = (selectedLetter === currentQ.correct);
+
+    gameState.totalAnswered++;
+
+    // Animação 3D da cápsula em direção ao receptor
+    capsuleWrapper.style.transform = 'translateY(18px) scale(1.1) rotateZ(12deg)';
+
+    if (isCorrect) {
+      gameState.totalCorrect++;
+      gameState.score += 100;
+      gameState.consecutiveHits++;
+
+      audioSystem.playSuccessChime();
+
+      // Efeito visual no botão acoplado
+      clickedElement.style.borderColor = 'rgba(16, 185, 129, 0.9)';
+      clickedElement.style.boxShadow = '0 0 25px rgba(16, 185, 129, 0.4)';
+      clickedElement.style.background = 'rgba(6, 78, 59, 0.5)';
+
+      capsuleStatusBadge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span> Ligação Efetiva! +100 Bioativo`;
+      capsuleStatusBadge.className = 'text-[11px] font-mono font-bold tracking-wider text-emerald-300 uppercase flex items-center gap-1.5 justify-center';
+
+      setTimeout(() => {
+        openFeedbackModal(true, selectedLetter, currentQ);
+      }, 500);
+
+    } else {
+      gameState.health--;
+      gameState.consecutiveHits = 0;
+      gameState.mistakeTopics.add(currentQ.topic);
+
+      renderHealthCapsules();
+      audioSystem.playFailureDegrade();
+
+      // Screen Shake biomédico
+      document.body.classList.add('shake-active');
+      setTimeout(() => document.body.classList.remove('shake-active'), 450);
+
+      // Efeito visual de rejeição no receptor
+      clickedElement.style.borderColor = 'rgba(239, 68, 68, 0.9)';
+      clickedElement.style.boxShadow = '0 0 25px rgba(239, 68, 68, 0.4)';
+      clickedElement.style.background = 'rgba(127, 29, 29, 0.5)';
+
+      capsuleStatusBadge.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-red-500 animate-ping"></span> Falha Farmacológica! -1 Integridade`;
+      capsuleStatusBadge.className = 'text-[11px] font-mono font-bold tracking-wider text-red-400 uppercase flex items-center gap-1.5 justify-center';
+
+      setTimeout(() => {
+        openFeedbackModal(false, selectedLetter, currentQ);
+      }, 500);
+    }
+  }
+
+  // Abertura do Painel: Análise de Farmacodinâmica
+  function openFeedbackModal(isSuccess, chosenLetter, questionData) {
+    if (isSuccess) {
+      feedbackHeader.className = 'px-5 py-3.5 border-b border-emerald-500/30 bg-emerald-950/40 flex items-center justify-between';
+      feedbackStatusIcon.className = 'w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-black';
+      feedbackStatusIcon.innerHTML = '✓';
+      feedbackStatusTitle.textContent = 'INTERAÇÃO BEM-SUCEDIDA (LIGAÇÃO EFETIVA)';
+      feedbackStatusTitle.className = 'text-base sm:text-lg font-black tracking-wide uppercase text-emerald-300';
+      feedbackRewardBadge.textContent = '+100 Bioativo';
+      feedbackRewardBadge.className = 'px-3 py-1 rounded-full text-xs font-mono font-black tracking-wider bg-emerald-950 text-emerald-400 border border-emerald-500/50';
+      
+      feedbackActionBtn.textContent = (gameState.currentIndex >= PHARMA_DATA.length - 1)
+        ? 'Ver Relatório Clínico Final ★'
+        : 'Seguir para o Próximo Tecido →';
+      feedbackActionBtn.className = 'px-5 py-2.5 rounded-xl font-bold font-mono text-xs sm:text-sm tracking-wider uppercase bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 shadow-lg shadow-emerald-500/25 transition-all';
+      
+      feedbackActionBtn.onclick = () => {
+        closeFeedbackModal();
+        gameState.currentIndex++;
+        loadQuestion(gameState.currentIndex);
+      };
+
+    } else {
+      feedbackHeader.className = 'px-5 py-3.5 border-b border-red-500/30 bg-red-950/40 flex items-center justify-between';
+      feedbackStatusIcon.className = 'w-8 h-8 rounded-lg bg-red-500/20 text-red-400 border border-red-500/40 flex items-center justify-center font-black';
+      feedbackStatusIcon.innerHTML = '✕';
+      feedbackStatusTitle.textContent = 'INCOMPATIBILIDADE RECEPTORA / FALHA METABÓLICA';
+      feedbackStatusTitle.className = 'text-base sm:text-lg font-black tracking-wide uppercase text-red-400';
+      feedbackRewardBadge.textContent = '-1 Integridade';
+      feedbackRewardBadge.className = 'px-3 py-1 rounded-full text-xs font-mono font-black tracking-wider bg-red-950 text-red-400 border border-red-500/50';
+
+      if (gameState.health <= 0) {
+        feedbackActionBtn.textContent = 'Ver Falência Terapêutica (Game Over) ☠';
+        feedbackActionBtn.className = 'px-5 py-2.5 rounded-xl font-bold font-mono text-xs sm:text-sm tracking-wider uppercase bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg shadow-red-600/30 transition-all';
+        feedbackActionBtn.onclick = () => {
+          closeFeedbackModal();
+          triggerGameOverScreen();
+        };
+      } else {
+        feedbackActionBtn.textContent = 'Reajustar Dose / Tentar Novamente ↻';
+        feedbackActionBtn.className = 'px-5 py-2.5 rounded-xl font-bold font-mono text-xs sm:text-sm tracking-wider uppercase bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow-lg shadow-amber-500/25 transition-all';
+        feedbackActionBtn.onclick = () => {
+          closeFeedbackModal();
+          // Permitir nova tentativa na mesma questão
+          gameState.isQuestionLocked = false;
+          const pods = receptorsContainer.querySelectorAll('.receptor-pod');
+          pods.forEach(pod => {
+            if (pod.dataset.letter !== chosenLetter) {
+              pod.disabled = false;
+              pod.classList.remove('opacity-70');
+            }
+          });
+        };
+      }
+    }
+
+    feedbackChoiceSubtitle.textContent = `Sua Escolha: Alternativa ${chosenLetter} | Gabarito Correto: Alternativa ${questionData.correct}`;
+    feedbackCorrectAnswerText.textContent = `[Alternativa ${questionData.correct}] ${questionData.options[questionData.correct]}`;
+    feedbackCorrectExplanation.textContent = questionData.correctExplanation;
+
+    // Dissecção dos 4 distratores incorretos
+    feedbackDistractorsList.innerHTML = '';
+    ['A', 'B', 'C', 'D', 'E'].forEach(letter => {
+      if (letter !== questionData.correct) {
+        const item = document.createElement('div');
+        item.className = 'p-2 rounded-lg bg-black/40 border border-slate-800 text-slate-300';
+        item.innerHTML = `
+          <div class="flex items-center gap-1.5 font-mono text-[11px] font-bold text-red-300 mb-0.5">
+            <span>● Alternativa ${letter}:</span>
+          </div>
+          <p class="text-xs text-slate-400 pl-3 border-l border-red-500/30">${questionData.distractorAnalysis[letter] || 'Inconsistência conceitual em relação aos alvos moleculares descritos na literatura.'}</p>
+        `;
+        feedbackDistractorsList.appendChild(item);
+      }
+    });
+
+    feedbackModal.classList.remove('hidden');
+  }
+
+  function closeFeedbackModal() {
+    feedbackModal.classList.add('hidden');
+    audioSystem.playTransitionBeep();
+  }
+
+  // Gatilho: Tela de Falência Terapêutica (Game Over)
+  function triggerGameOverScreen() {
+    const totalAns = Math.max(1, gameState.totalAnswered);
+    const eff = Math.round((gameState.totalCorrect / totalAns) * 100);
+
+    document.getElementById('goScore').textContent = `${gameState.score} pts`;
+    document.getElementById('goEfficiency').textContent = `${eff}%`;
+    document.getElementById('goCorrects').textContent = `${gameState.totalCorrect}`;
+    document.getElementById('goFails').textContent = `${gameState.maxHealth - gameState.health}`;
+
+    const reviewList = document.getElementById('goReviewPoints');
+    reviewList.innerHTML = '';
+    if (gameState.mistakeTopics.size > 0) {
+      gameState.mistakeTopics.forEach(top => {
+        const li = document.createElement('li');
+        li.textContent = `Revisar: ${top}`;
+        reviewList.appendChild(li);
+      });
+    } else {
+      const li = document.createElement('li');
+      li.textContent = 'Revisar: Mecanismos de Transporte Tubular Renal e Curvas de Eficácia.';
+      reviewList.appendChild(li);
+    }
+
+    gameOverModal.classList.remove('hidden');
+  }
+
+  // Gatilho: Tela de Congruência Terapêutica (Vitória)
+  function triggerVictoryScreen() {
+    const totalAns = Math.max(1, gameState.totalAnswered);
+    const eff = Math.round((gameState.totalCorrect / totalAns) * 100);
+
+    document.getElementById('vicBioavailability').textContent = `${eff}%`;
+    document.getElementById('vicEfficiency').textContent = `${eff}%`;
+    document.getElementById('vicScore').textContent = `${gameState.score} pts`;
+    document.getElementById('vicRemainingHealth').textContent = `${gameState.health}/10`;
+
+    victoryModal.classList.remove('hidden');
+  }
+
+  // Reiniciar todo o jogo
+  function restartGame() {
+    gameState.currentIndex = 0;
+    gameState.health = gameState.maxHealth;
+    gameState.score = 0;
+    gameState.consecutiveHits = 0;
+    gameState.totalAnswered = 0;
+    gameState.totalCorrect = 0;
+    gameState.mistakeTopics.clear();
+    gameState.isQuestionLocked = false;
+
+    gameOverModal.classList.add('hidden');
+    victoryModal.classList.add('hidden');
+    feedbackModal.classList.add('hidden');
+
+    renderHealthCapsules();
+    loadQuestion(0);
+    audioSystem.playSuccessChime();
+  }
+
+  restartBtnLoss.addEventListener('click', restartGame);
+  restartBtnWin.addEventListener('click', restartGame);
+
+  // Alternar Áudio
+  soundToggleBtn.addEventListener('click', () => {
+    audioSystem.enabled = !audioSystem.enabled;
+    soundIconOn.classList.toggle('hidden', !audioSystem.enabled);
+    soundIconOff.classList.toggle('hidden', audioSystem.enabled);
+  });
+
+  // Inicialização Geral
+  window.onload = function() {
+    resizeCanvas();
+    initErythrocytes();
+    renderBloodstream(0);
+    renderHealthCapsules();
+    loadQuestion(0);
+  };
+  </script>
+</body>
+</html>
