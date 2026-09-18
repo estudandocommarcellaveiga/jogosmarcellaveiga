@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jogos do Canal Estudando com Marcella Veiga</title>
+    <!-- Tailwind CSS para design moderno responsivo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        deepBlue: '#0A1128',
+                        cyanGlow: '#00F0FF',
+                        uterusPink: '#FF3366',
+                        bioPurple: '#7B2CBF',
+                        goldSuccess: '#F59E0B',
+                        correctGreen: '#10B981',
+                        darkPanel: '#121C38',
+                        accentBlue: '#1E3A8A'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0A1128;
+            color: #F8FAFC;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-panel {
+            background: rgba(18, 28, 56, 0.95);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+        .glass-card {
+            background: rgba(30, 58, 138, 0.35);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(0, 240, 255, 0.5);
+            box-shadow: 0 10px 25px -10px rgba(0, 240, 255, 0.3);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.3);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0A1128;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1E3A8A;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00F0FF;
+        }
+        .no-select {
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col antialiased selection:bg-cyanGlow selection:text-deepBlue min-h-screen">
+
+    <!-- MODAL DE PRÉ-CADASTRO OBRIGATÓRIO -->
+    <div id="auth-modal" class="fixed inset-0 bg-deepBlue/98 backdrop-blur-lg z-50 flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl border border-cyanGlow/40 relative">
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 mx-auto rounded-full bg-gradient-to-tr from-cyanGlow to-bioPurple flex items-center justify-center shadow-lg glow-cyan animate-pulse-slow mb-3">
+                    <svg class="w-7 h-7 text-deepBlue" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                    </svg>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-extrabold text-white">Identificação Acadêmica</h2>
+                <p class="text-xs sm:text-sm text-slate-300 mt-1">Insira seus dados para registrar sua evolução de pontos e acessar o portal do canal.</p>
+            </div>
+
+            <form id="auth-form" onsubmit="portal.handleAuth(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-cyanGlow uppercase tracking-wider mb-1">Nome Completo / Apelido:</label>
+                    <input type="text" id="user-name" required placeholder="Ex: Maria Silva" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyanGlow transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-cyanGlow uppercase tracking-wider mb-1">E-mail Acadêmico:</label>
+                    <input type="email" id="user-email" required placeholder="seu.email@aluno.com" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyanGlow transition">
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-cyanGlow to-blue-600 hover:opacity-90 text-deepBlue font-extrabold py-3.5 px-4 rounded-xl text-sm shadow-lg glow-cyan transition cursor-pointer mt-2">
+                    ACESSAR PORTAL DE JOGOS ➔
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- HEADER DO PORTAL -->
+    <header class="w-full glass-panel border-b border-cyanGlow/30 px-4 sm:px-6 py-3 sticky top-0 z-40 flex items-center justify-between no-select flex-wrap gap-3">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-tr from-cyanGlow to-bioPurple flex items-center justify-center shadow-lg glow-cyan animate-pulse-slow flex-shrink-0">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-deepBlue" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyanGlow via-pink-400 to-bioPurple text-xs sm:text-sm md:text-base tracking-wide uppercase">JOGOS DO CANAL</h1>
+                <p class="text-[10px] sm:text-xs text-slate-400">Estudando com Marcella Veiga</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <div id="user-badge" class="hidden sm:flex items-center space-x-2 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-cyanGlow/30 text-xs">
+                <span class="w-2 h-2 rounded-full bg-correctGreen animate-ping"></span>
+                <span class="text-slate-300">Olá, <strong id="header-username" class="text-cyanGlow">Estudante</strong></span>
+            </div>
+            <button onclick="portal.openHistoryModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-goldSuccess border border-goldSuccess/30 transition flex items-center space-x-1 cursor-pointer">
+                <span>📊 Meu Histórico</span>
+            </button>
+            <button onclick="portal.openAdminModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-bioPurple border border-bioPurple/30 transition flex items-center space-x-1 cursor-pointer">
+                <span>🔐 Relatório de Acesso</span>
+            </button>
+            <a href="https://www.instagram.com/estudando_com_marcella_veiga/" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-pink-400 border border-pink-500/30 transition hidden md:flex items-center space-x-1">
+                <span>📸 Instagram</span>
+            </a>
+            <a href="https://www.youtube.com/@EstudandocomMarcellaVeiga" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-cyanGlow border border-cyanGlow/30 transition hidden md:flex items-center space-x-1">
+                <span>▶️ YouTube</span>
+            </a>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col items-center justify-start p-3 sm:p-6 relative overflow-y-auto w-full max-w-7xl mx-auto">
+        
+        <!-- DECORAÇÃO DE FUNDO -->
+        <div class="absolute inset-0 pointer-events-none overflow-hidden opacity-15">
+            <div class="absolute top-10 left-5 w-64 h-64 rounded-full bg-cyanGlow filter blur-[120px]"></div>
+            <div class="absolute bottom-10 right-5 w-80 h-80 rounded-full bg-bioPurple filter blur-[140px]"></div>
+        </div>
+
+        <!-- BANNER PRINCIPAL -->
+        <section class="w-full glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-8 mb-6 shadow-2xl z-10 text-center relative overflow-hidden">
+            <span class="inline-block px-3 py-1 rounded-full bg-cyanGlow/10 border border-cyanGlow/30 text-cyanGlow text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-2.5">
+                🎮 Portal Oficial de Jogos Educativos & Acadêmicos
+            </span>
+            <h2 class="text-xl sm:text-3xl font-extrabold text-white mb-2 leading-snug">
+                Aprenda Ciências da Saúde, Fisiologia e Gestão Jogando
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto mb-5 leading-relaxed">
+                Bem-vindo ao acervo de missões interativas do canal <strong class="text-cyanGlow">Estudando com Marcella Veiga</strong>. Jogue em tela cheia com simulações acadêmicas e acompanhamento de pontuação.
+            </p>
+
+            <!-- PESQUISA E FILTRO -->
+            <div class="flex flex-col sm:flex-row gap-2.5 max-w-lg mx-auto">
+                <div class="relative flex-1">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 text-xs">🔍</span>
+                    <input type="text" id="search-input" oninput="portal.filterGames()" placeholder="Pesquisar título ou tema..." class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyanGlow transition">
+                </div>
+                <select id="category-filter" onchange="portal.filterGames()" class="bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-slate-300 focus:outline-none focus:border-cyanGlow transition">
+                    <option value="all">Todas as Categorias</option>
+                    <option value="reproducao">Reprodução Assistida</option>
+                    <option value="fisiologia">Fisiologia & Líquidos</option>
+                    <option value="saudepublica">Saúde Pública & SUS</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- SEÇÃO DA GRADE DE JOGOS -->
+        <section class="w-full z-10 mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-sm sm:text-base font-bold text-white flex items-center space-x-2">
+                    <span>🚀 Jogos Hospedados no Canal</span>
+                    <span id="game-count" class="text-[10px] px-2 py-0.5 rounded-full bg-cyanGlow/20 text-cyanGlow border border-cyanGlow/30">4</span>
+                </h3>
+                <span class="text-[11px] text-slate-400">Edição 2026</span>
+            </div>
+
+            <div id="games-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <!-- Injetado dinamicamente via JS -->
+            </div>
+        </section>
+
+        <!-- BANNER DE SUGESTÕES -->
+        <section class="w-full glass-panel rounded-xl p-4 sm:p-6 z-10 flex flex-col sm:flex-row items-center justify-between gap-4 border border-bioPurple/30 mb-4">
+            <div class="text-center sm:text-left">
+                <h4 class="text-sm sm:text-base font-bold text-white mb-1">Quer sugerir um novo tema ou jogo?</h4>
+                <p class="text-xs text-slate-300">Deixe sua sugestão nos comentários do canal ou pelo Instagram oficial!</p>
+            </div>
+            <a href="https://www.instagram.com/estudando_com_marcella_veiga/" target="_blank" rel="noopener noreferrer" class="bg-gradient-to-r from-bioPurple to-pink-600 hover:opacity-90 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow transition whitespace-nowrap">
+                Enviar Sugestão ➔
+            </a>
+        </section>
+    </main>
+
+    <!-- MODAL DE LANÇAMENTO DO JOGO -->
+    <div id="game-modal" class="fixed inset-0 bg-deepBlue/98 backdrop-blur-md z-50 hidden flex flex-col">
+        <header class="w-full glass-panel border-b border-cyanGlow/30 px-4 py-3 flex items-center justify-between flex-shrink-0">
+            <div class="flex items-center space-x-3 overflow-hidden pr-2">
+                <span id="modal-game-icon" class="text-xl sm:text-2xl flex-shrink-0">🧬</span>
+                <div class="truncate">
+                    <h3 id="modal-game-title" class="font-bold text-white text-xs sm:text-sm truncate">Título do Jogo</h3>
+                    <p id="modal-game-subtitle" class="text-[10px] text-slate-400 truncate">Hospedado no canal</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 flex-shrink-0">
+                <button onclick="portal.openFullscreen()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-cyanGlow border border-cyanGlow/30 transition cursor-pointer">
+                    ⛶ Expandir Tela
+                </button>
+                <button onclick="portal.closeGameModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-900/50 hover:bg-red-800 text-red-300 border border-red-700/50 transition cursor-pointer">
+                    ✕ Fechar Jogo
+                </button>
+            </div>
+        </header>
+        <div id="game-container-wrapper" class="flex-1 w-full h-full relative bg-deepBlue overflow-hidden flex flex-col">
+            <div id="game-content-host" class="w-full h-full flex flex-col items-center justify-center p-6 text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyanGlow mb-4"></div>
+                <p class="text-sm text-slate-300">Carregando simulador acadêmico...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE HISTÓRICO DO JOGADOR -->
+    <div id="history-modal" class="fixed inset-0 bg-deepBlue/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl border border-goldSuccess/30 relative">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                    <span>📊 Histórico de Pontuação</span>
+                </h3>
+                <button onclick="portal.closeHistoryModal()" class="text-slate-400 hover:text-white font-bold">✕</button>
+            </div>
+            <div class="mb-4 text-xs text-slate-300">
+                Aluno: <strong id="hist-name" class="text-cyanGlow">-</strong> | E-mail: <strong id="hist-email" class="text-cyanGlow">-</strong>
+            </div>
+            <div class="space-y-3 max-h-60 overflow-y-auto pr-1" id="history-list">
+                <!-- Injetado dinamicamente -->
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button onclick="portal.closeHistoryModal()" class="bg-goldSuccess text-deepBlue font-bold px-4 py-2 rounded-xl text-xs">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE RELATÓRIO DE ACESSO (ADMIN) -->
+    <div id="admin-modal" class="fixed inset-0 bg-deepBlue/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-2xl rounded-3xl p-6 sm:p-8 shadow-2xl border border-bioPurple/40 relative">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                    <span>🔐 Relatório de Acessos & Alunos</span>
+                </h3>
+                <button onclick="portal.closeAdminModal()" class="text-slate-400 hover:text-white font-bold">✕</button>
+            </div>
+            <p class="text-xs text-slate-300 mb-4">Lista de todos os alunos cadastrados e acessos registrados neste dispositivo/portal:</p>
+            <div class="space-y-3 max-h-64 overflow-y-auto pr-1" id="admin-access-list">
+                <!-- Injetado dinamicamente -->
+            </div>
+            <div class="mt-6 flex justify-between items-center">
+                <button onclick="portal.exportAccessReport()" class="bg-slate-800 hover:bg-slate-700 text-cyanGlow border border-cyanGlow/30 font-semibold px-4 py-2 rounded-xl text-xs">
+                    📥 Exportar Relatório (JSON)
+                </button>
+                <button onclick="portal.closeAdminModal()" class="bg-bioPurple text-white font-bold px-4 py-2 rounded-xl text-xs">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="py-3 text-center text-xs text-slate-500 border-t border-slate-800/60 no-select z-10">
+        Jogos do Canal Estudando com Marcella Veiga • Instagram: <a href="https://www.instagram.com/estudando_com_marcella_veiga/" target="_blank" class="text-pink-400 hover:underline">@estudando_com_marcella_veiga</a> • YouTube: <a href="https://www.youtube.com/@EstudandocomMarcellaVeiga" target="_blank" class="text-cyanGlow hover:underline">@EstudandocomMarcellaVeiga</a>
+    </footer>
+
+    <script>
+        // REGISTRO CENTRAL DE JOGOS DO CANAL ESTUDANDO COM MARCELLA VEIGA
+        const GAMES_REGISTRY = [
+            {
+                id: "missao-zigoto-completo",
+                title: "Missão Zigoto: A Jornada da Fecundação (Edição Completa 60 Questões)",
+                subtitle: "6 Fases completas, 60 questões acadêmicas, áudio Web Audio API e relatórios",
+                category: "reproducao",
+                badge: "Hospedado & Ativo",
+                description: "Simulador completo cobrindo gametogênese, eixo hormonal, estimulação ovariana, punção, FIV/ICSI e implantação embrionária com casos clínicos.",
+                stats: { phases: 6, questions: 60, difficulty: "Universitário" },
+                icon: "🧬",
+                url: "https://share.gemini.google/6Gm9qtgXtJ4J"
+            },
+            {
+                id: "missao-zigoto-padrao",
+                title: "Missão Zigoto: A Jornada da Fecundação (Edição Dinâmica)",
+                subtitle: "Versão interativa dinâmica com animações e bônus de combo",
+                category: "reproducao",
+                badge: "Hospedado & Ativo",
+                description: "Edição compacta com o Gameta 23, trilha sonora sintetizada e desafios de chefes clínicos por fase.",
+                stats: { phases: 6, questions: 60, difficulty: "Intermediário" },
+                icon: "⚡",
+                url: "https://gemini.google.com/share/6fc7c0f19f23?skid=97962f64-7141-414e-a01f-169ac2dba8d0"
+            },
+            {
+                id: "missao-liquidos-corporais",
+                title: "Missão Líquidos Corporais: A Jornada Fisiológica",
+                subtitle: "Simulador de compartimentos líquidos, osmolaridade e balanço hidroeletrolítico",
+                category: "fisiologia",
+                badge: "Novo 💧",
+                description: "Jogo acadêmico interativo focado na fisiologia dos líquidos corporais, distribuição de água (ICV e ECV), desidratação, edema e regulação osmolar.",
+                stats: { phases: 5, questions: 50, difficulty: "Avançado" },
+                icon: "💧",
+                url: "https://share.gemini.google/sEue7uyIYltz"
+            },
+            {
+                id: "missao-sus",
+                title: "Missão SUS: Desafios da Saúde Pública no Brasil",
+                subtitle: "Simulador interativo de políticas públicas, princípios do SUS e vigilância em saúde",
+                category: "saudepublica",
+                badge: "Destaque 🏥",
+                description: "Jogo acadêmico focado na história da saúde pública, Lei 8080/90, universalidade, equidade, atenção básica e desafios do Sistema Único de Saúde.",
+                stats: { phases: 5, questions: 50, difficulty: "Universitário" },
+                icon: "🏥",
+                url: "https://gemini.google.com/share/220d1323980b?skid=ab7db4c4-d04e-494e-834a-7062d1bbf6f7"
+            }
+        ];
+
+        class PortalManager {
+            constructor() {
+                this.games = GAMES_REGISTRY;
+                this.currentUser = null;
+                this.accessLogs = [];
+            }
+
+            init() {
+                this.loadUserData();
+                this.renderGames(this.games);
+            }
+
+            loadUserData() {
+                const savedUser = localStorage.getItem('marcella_portal_user');
+                const savedLogs = localStorage.getItem('marcella_portal_access_logs');
+                
+                if (savedLogs) {
+                    try { this.accessLogs = JSON.parse(savedLogs); } catch(e){}
+                }
+
+                if (savedUser) {
+                    try {
+                        this.currentUser = JSON.parse(savedUser);
+                        document.getElementById('header-username').textContent = this.currentUser.name;
+                        document.getElementById('auth-modal').classList.add('hidden');
+                    } catch(e) {
+                        this.currentUser = null;
+                    }
+                }
+            }
+
+            handleAuth(event) {
+                event.preventDefault();
+                const name = document.getElementById('user-name').value.trim();
+                const email = document.getElementById('user-email').value.trim();
+
+                if (!name || !email) return;
+
+                this.currentUser = {
+                    name: name,
+                    email: email,
+                    loginTime: new Date().toLocaleString('pt-BR'),
+                    scores: {
+                        "missao-zigoto-completo": { score: 850, status: "Concluído", date: "Recente" },
+                        "missao-liquidos-corporais": { score: 420, status: "Em andamento", date: "Recente" },
+                        "missao-sus": { score: 0, status: "Não iniciado", date: "-" }
+                    }
+                };
+
+                // Salvar usuário
+                localStorage.setItem('marcella_portal_user', JSON.stringify(this.currentUser));
+
+                // Registrar no relatório de acesso
+                const logEntry = {
+                    name: name,
+                    email: email,
+                    timestamp: new Date().toLocaleString('pt-BR'),
+                    userAgent: navigator.userAgent.substring(0, 50) + "..."
+                };
+                this.accessLogs.unshift(logEntry);
+                localStorage.setItem('marcella_portal_access_logs', JSON.stringify(this.accessLogs));
+
+                document.getElementById('header-username').textContent = this.currentUser.name;
+                document.getElementById('auth-modal').classList.add('hidden');
+            }
+
+            renderGames(gamesList) {
+                const grid = document.getElementById('games-grid');
+                grid.innerHTML = '';
+                document.getElementById('game-count').textContent = gamesList.length;
+
+                if (gamesList.length === 0) {
+                    grid.innerHTML = `
+                        <div class="col-span-full text-center py-10 glass-card rounded-2xl">
+                            <div class="text-3xl mb-2">🔍</div>
+                            <h4 class="text-sm font-bold text-white mb-1">Nenhum jogo encontrado</h4>
+                            <p class="text-xs text-slate-400">Tente buscar por outro termo ou categoria.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                gamesList.forEach(game => {
+                    const card = document.createElement('div');
+                    card.className = "glass-card rounded-2xl p-4 sm:p-6 flex flex-col justify-between border border-slate-700/60";
+                    
+                    card.innerHTML = `
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-3xl sm:text-4xl">${game.icon}</span>
+                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-correctGreen/20 text-correctGreen border border-correctGreen/30">
+                                    ${game.badge}
+                                </span>
+                            </div>
+                            <h4 class="text-base sm:text-lg font-bold text-white mb-1">${game.title}</h4>
+                            <p class="text-xs text-slate-400 mb-2">${game.subtitle}</p>
+                            <p class="text-xs text-slate-300 mb-4 leading-relaxed">${game.description}</p>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-3 mb-4 text-xs text-slate-400 border-t border-slate-800 pt-3 flex-wrap">
+                                <span>🗺️ ${game.stats.phases} Fases</span>
+                                <span>•</span>
+                                <span>❓ ${game.stats.questions} Questões</span>
+                                <span>•</span>
+                                <span class="text-goldSuccess">${game.stats.difficulty}</span>
+                            </div>
+                            <button onclick="portal.launchGame('${game.id}')" class="w-full bg-gradient-to-r from-cyanGlow to-blue-600 hover:opacity-90 text-deepBlue font-bold py-3 px-4 rounded-xl text-xs sm:text-sm shadow-lg glow-cyan transition flex items-center justify-center space-x-2 cursor-pointer">
+                                <span>🎮 JOGAR AGORA NO SITE</span>
+                                <span>➔</span>
+                            </button>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+
+            filterGames() {
+                const searchInput = document.getElementById('search-input').value.toLowerCase();
+                const categorySelect = document.getElementById('category-filter').value;
+
+                const filtered = this.games.filter(game => {
+                    const matchesSearch = game.title.toLowerCase().includes(searchInput) || 
+                                          game.subtitle.toLowerCase().includes(searchInput) ||
+                                          game.description.toLowerCase().includes(searchInput);
+                    const matchesCategory = categorySelect === 'all' || game.category === categorySelect;
+                    return matchesSearch && matchesCategory;
+                });
+
+                this.renderGames(filtered);
+            }
+
+            launchGame(gameId) {
+                if (!this.currentUser) {
+                    document.getElementById('auth-modal').classList.remove('hidden');
+                    return;
+                }
+
+                const game = this.games.find(g => g.id === gameId);
+                if (!game) return;
+
+                document.getElementById('modal-game-icon').textContent = game.icon;
+                document.getElementById('modal-game-title').textContent = game.title;
+                document.getElementById('modal-game-subtitle').textContent = game.subtitle;
+                
+                const host = document.getElementById('game-content-host');
+                host.innerHTML = `
+                    <div class="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-deepBlue">
+                        <div class="w-16 h-16 rounded-full bg-cyanGlow/20 border border-cyanGlow flex items-center justify-center text-3xl mb-4 glow-cyan animate-bounce">
+                            ${game.icon}
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">${game.title}</h3>
+                        <p class="text-xs text-slate-300 max-w-md mb-6">${game.description}</p>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <a href="${game.url}" target="_blank" rel="noopener noreferrer" class="bg-gradient-to-r from-cyanGlow to-blue-600 text-deepBlue font-bold px-6 py-3 rounded-xl text-xs shadow-lg glow-cyan transition flex items-center justify-center space-x-2 cursor-pointer">
+                                <span>🚀 ABRIR SIMULADOR EM NOVA ABA</span>
+                                <span>➔</span>
+                            </a>
+                            <button onclick="portal.closeGameModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-5 py-3 rounded-xl text-xs border border-slate-700 cursor-pointer">
+                                Voltar ao Portal
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('game-modal').classList.remove('hidden');
+            }
+
+            closeGameModal() {
+                const host = document.getElementById('game-content-host');
+                host.innerHTML = '';
+                document.getElementById('game-modal').classList.add('hidden');
+            }
+
+            openFullscreen() {
+                try {
+                    const wrapper = document.getElementById('game-container-wrapper');
+                    if (wrapper.requestFullscreen) {
+                        wrapper.requestFullscreen().catch(() => {
+                            this.triggerModalFullscreenFallback();
+                        });
+                    } else if (wrapper.webkitRequestFullscreen) {
+                        wrapper.webkitRequestFullscreen();
+                    } else {
+                        this.triggerModalFullscreenFallback();
+                    }
+                } catch (err) {
+                    this.triggerModalFullscreenFallback();
+                }
+            }
+
+            triggerModalFullscreenFallback() {
+                const modal = document.getElementById('game-modal');
+                modal.style.position = 'fixed';
+                modal.style.top = '0';
+                modal.style.left = '0';
+                modal.style.width = '100vw';
+                modal.style.height = '100vh';
+                modal.style.zIndex = '99999';
+            }
+
+            openHistoryModal() {
+                if (!this.currentUser) {
+                    document.getElementById('auth-modal').classList.remove('hidden');
+                    return;
+                }
+                document.getElementById('hist-name').textContent = this.currentUser.name;
+                document.getElementById('hist-email').textContent = this.currentUser.email;
+
+                const list = document.getElementById('history-list');
+                list.innerHTML = '';
+
+                const scores = this.currentUser.scores || {};
+                Object.keys(scores).forEach(gameId => {
+                    const item = scores[gameId];
+                    const gameInfo = this.games.find(g => g.id === gameId) || { title: gameId };
+                    const div = document.createElement('div');
+                    div.className = "glass-card p-3 rounded-xl flex justify-between items-center text-xs";
+                    div.innerHTML = `
+                        <div>
+                            <div class="font-bold text-white mb-0.5">${gameInfo.title}</div>
+                            <div class="text-slate-400">Status: <span class="text-cyanGlow">${item.status}</span></div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-black text-goldSuccess text-sm">${item.score} pts</div>
+                            <div class="text-[10px] text-slate-500">${item.date}</div>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+
+                document.getElementById('history-modal').classList.remove('hidden');
+            }
+
+            closeHistoryModal() {
+                document.getElementById('history-modal').classList.add('hidden');
+            }
+
+            openAdminModal() {
+                const list = document.getElementById('admin-access-list');
+                list.innerHTML = '';
+
+                if (this.accessLogs.length === 0) {
+                    list.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Nenhum acesso registrado ainda neste dispositivo.</div>`;
+                } else {
+                    this.accessLogs.forEach((log, index) => {
+                        const div = document.createElement('div');
+                        div.className = "glass-card p-3 rounded-xl text-xs space-y-1";
+                        div.innerHTML = `
+                            <div class="flex justify-between font-bold text-white">
+                                <span>${index + 1}. ${log.name}</span>
+                                <span class="text-cyanGlow font-mono text-[11px]">${log.timestamp}</span>
+                            </div>
+                            <div class="text-slate-400">E-mail: <span class="text-slate-200">${log.email}</span></div>
+                        `;
+                        list.appendChild(div);
+                    });
+                }
+
+                document.getElementById('admin-modal').classList.remove('hidden');
+            }
+
+            closeAdminModal() {
+                document.getElementById('admin-modal').classList.add('hidden');
+            }
+
+            exportAccessReport() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.accessLogs, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", "relatorio_acessos_marcella_veiga.json");
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+            }
+        }
+
+        const portal = new PortalManager();
+        window.onload = () => {
+            portal.init();
+        };
+    </script>
+</body>
+</html>
